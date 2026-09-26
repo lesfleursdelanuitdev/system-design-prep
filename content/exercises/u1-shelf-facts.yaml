@@ -1,0 +1,49 @@
+id: u1-shelf-facts
+type: quiz
+title: Check your picture of Shelf
+questions:
+  - prompt: The tag “vegetarian” is defined in the scope `/food`. Where can it go?
+    options:
+      - text: On any item in any scope
+        explanation: Only tags defined in the root scope (`/`) can go anywhere. A tag reaches its own scope and the scopes below it.
+      - text: On items in `/food` and any scope below `/food`
+        correct: true
+        explanation: Right. A tag fits items in its own scope or below it, so recipes yes, quizzes and photos no.
+      - text: Only on items the curator who created it has tagged before
+        explanation: Scopes decide where a tag fits, not who created it.
+  - prompt: The recipe site changes a recipe’s title. Which copy of the title is correct?
+    options:
+      - text: The one in Shelf, because Shelf is where people search
+        explanation: Shelf only keeps a copy so it can show the title. The recipe site owns the recipe, including its title.
+      - text: The one in the recipe site
+        correct: true
+        explanation: Right. The app owns its items. Shelf’s copy is refreshed when the app pushes a change, and again at the nightly pull.
+      - text: Whichever was changed most recently
+        explanation: Tempting, but it would let Shelf overrule the app. The owner of the data is always right; copies follow it.
+  - prompt: The recipe site deletes a recipe that has five tags. What happens to the tags straight away?
+    options:
+      - text: They are deleted with it
+        explanation: That would lose them for good if the recipe was deleted by mistake. Shelf waits.
+      - text: Nothing changes; the recipe still shows in lookups
+        explanation: "Shelf does react: the item is marked missing and hidden from lookups."
+      - text: The item is marked missing and keeps its tags for 30 days in case it comes back
+        correct: true
+        explanation: Right. If the recipe reappears within 30 days, it comes back with all five tags.
+  - prompt: The apps already tell Shelf about every change. Why does Shelf also pull a full list every night?
+    options:
+      - text: Pulling is faster than pushing
+        explanation: Pulling everything is slower. It happens at night for that reason.
+      - text: As a safety net, to repair changes that were never pushed
+        correct: true
+        explanation: Right. Apps have bugs, networks drop requests, and deploys go wrong. The nightly pull catches what pushes miss.
+      - text: So that the apps don’t need to push at all
+        explanation: With pull alone, a change could take a day to show up. Push keeps things fresh; pull keeps them correct.
+  - prompt: Who does someone browsing the photo gallery talk to when they look at photos tagged “favourite”?
+    options:
+      - text: Shelf directly
+        explanation: The apps’ users never talk to Shelf. The gallery asks Shelf on their behalf.
+      - text: The photo gallery, which asks Shelf
+        correct: true
+        explanation: Right. The gallery is Shelf’s user here; its own users only see the gallery.
+      - text: A curator
+        explanation: Curators put tags on items; they don’t serve lookups.

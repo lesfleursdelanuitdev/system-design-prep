@@ -1,0 +1,39 @@
+id: u1-architecture-or-design
+type: sort
+title: Architecture or design detail?
+intro: Apply the rewrite test to each Shelf decision. If getting it wrong means a migration, a rewrite, or other teams changing their code, it’s architecture.
+buckets:
+  - id: architecture
+    label: Architecture
+    hint: Expensive to change later.
+  - id: design
+    label: Design detail
+    hint: Cheap to change later.
+items:
+  - text: A tag belongs to exactly one scope
+    bucket: architecture
+    reason: Stored tags, the rules for where tags can go, and apps’ screens are all built around it. Letting a tag live in several scopes later means a data migration.
+  - text: The retention job processes 1,000 items per batch
+    bucket: design
+    reason: A setting inside one job. Nothing else depends on the batch size.
+  - text: Apps identify their items with their own ids, not with ids Shelf hands out
+    bucket: architecture
+    reason: Every app and every stored tag relies on it. Switching to Shelf-issued ids would change every app’s code.
+  - text: Error responses are JSON with a stable `code` field
+    bucket: architecture
+    reason: Apps write code that reads that field. Changing the shape of errors breaks all of them.
+  - text: The admin screen shows a tag’s description under its name
+    bucket: design
+    reason: A layout choice on one screen. Move it whenever you like.
+  - text: Shelf stores a cached copy of each item’s title
+    bucket: architecture
+    reason: It decides what data Shelf keeps and how it stays fresh. Removing it later changes how lookups work for every app.
+  - text: Tag names are compared ignoring upper and lower case
+    bucket: architecture
+    reason: Once two tags called “Vegan” and “vegan” exist in one scope, switching to case-insensitive rules means merging data. Decide before data exists.
+  - text: The nightly pull asks for 500 items per page
+    bucket: design
+    reason: Shelf chooses the number when it calls, within the limit the contract allows. Changing it affects no one else.
+  - text: A log line’s wording when a pull finishes
+    bucket: design
+    reason: Only people reading logs see it. (If an alert matches on the text, it becomes a little more expensive, which is a good reason not to do that.)

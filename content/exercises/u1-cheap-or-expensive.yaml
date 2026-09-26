@@ -1,0 +1,42 @@
+id: u1-cheap-or-expensive
+type: sort
+title: Cheap or expensive to change later?
+intro: Ten decisions someone building Shelf has to make. For each one, decide whether changing it *after* Shelf is live would be cheap or expensive.
+buckets:
+  - id: cheap
+    label: Cheap to change later
+    hint: Change it, redeploy, done. Nobody else has to change anything.
+  - id: expensive
+    label: Expensive to change later
+    hint: Stored data, other apps or other people depend on it.
+items:
+  - text: The colour of the buttons on Shelf’s admin screens
+    bucket: cheap
+    reason: Change the style, redeploy. No data or other app depends on it.
+  - text: What identifies an item (the app’s own id plus which app it came from)
+    bucket: expensive
+    reason: Every stored tag points at items by this key, and every app sends it. Changing it means migrating all the data and every app.
+  - text: The wording of an error message
+    bucket: cheap
+    reason: As long as callers check the error *code* and not the message, you can reword messages freely. (That’s worth writing into the contract.)
+  - text: The error codes the API returns, such as `tag_out_of_scope`
+    bucket: expensive
+    reason: Apps write code that checks these codes. Rename one and their code quietly stops working.
+  - text: Whether a deleted item’s tags are kept or thrown away
+    bucket: expensive
+    reason: Once tags are thrown away they’re gone, and people come to rely on whichever behaviour they’ve seen. Decide it deliberately.
+  - text: How many rows the admin screen shows per page
+    bucket: cheap
+    reason: A display setting that nobody depends on.
+  - text: The shape of the JSON that apps send when their items change
+    bucket: expensive
+    reason: Every app builds that JSON. Changing it means every app changes too, at the same time or with a careful transition.
+  - text: The name of a helper function inside Shelf’s code
+    bucket: cheap
+    reason: Internal. Rename it and let the compiler find every use.
+  - text: Which database Shelf keeps its tags in
+    bucket: expensive
+    reason: Moving means migrating live data and rewriting every query. Possible, but a project in itself.
+  - text: Whether the nightly pull runs at 2am or 3am
+    bucket: cheap
+    reason: A setting. Nothing outside Shelf depends on the exact time.

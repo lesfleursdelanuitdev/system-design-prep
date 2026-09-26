@@ -1,0 +1,67 @@
+# The units of the course, in order. Lesson folders are content/lessons/<nn>-<slug>/.
+# mapPart: the part of the design map (Unit 1, lesson 4) every lesson in the unit highlights,
+# unless a lesson's frontmatter sets its own.
+- number: 1
+  slug: getting-oriented
+  title: Getting oriented
+  summary: What designing a system means, how it differs from architecture, the running example, and the map of a design.
+  lessons: [what-designing-means, design-vs-architecture, meet-shelf, the-map]
+- number: 2
+  slug: requirements
+  title: Requirements
+  summary: What the system must do, how well it must do it, and how to write both so they can be checked.
+  mapPart: requirements
+  lessons: [what-it-must-do, how-well-it-must-do-it, making-it-measurable, back-of-the-envelope, availability-in-real-time, quality-scenarios, constraints-and-priorities]
+- number: 3
+  slug: domain-model
+  title: The domain model
+  summary: The concepts in the problem, how they relate, what makes each one itself, and who owns the truth about it.
+  mapPart: domain-model
+  lessons: [finding-the-nouns, relationships, identity, who-owns-the-truth]
+- number: 4
+  slug: boundaries
+  title: Boundaries and modules
+  summary: Grouping concepts into modules that own their data, pointing dependencies the right way, and leaving room to plug things in.
+  mapPart: boundaries
+  lessons: [drawing-the-lines, which-way-dependencies-point, plug-in-points]
+- number: 5
+  slug: data-model
+  title: The data model
+  summary: Turning concepts into tables, keeping cached copies fresh, and deleting things without losing what matters.
+  mapPart: data-model
+  lessons: [from-concepts-to-tables, cached-vs-owned-columns, soft-deletes-and-retention]
+- number: 6
+  slug: contracts
+  title: Contracts
+  summary: How to design the promise between two parts of a system, step by step, and write it down so both people and machines can check it.
+  mapPart: contracts
+  lessons: [what-a-contract-is, sides-and-ownership, nouns-and-identity, operations, errors-are-part-of-the-contract, behavioural-guarantees, who-may-call-it, changing-a-contract-safely, write-it-down-for-machines, worked-example]
+- number: 7
+  slug: flows-and-state
+  title: Flows and state
+  summary: Drawing what happens in order, and the stages a thing goes through.
+  mapPart: flows
+  lessons: [sequence-diagrams, state-diagrams]
+- number: 8
+  slug: when-things-go-wrong
+  title: When things go wrong
+  summary: Listing what can fail, deciding what happens then, and knowing the system is healthy.
+  mapPart: failure
+  lessons: [listing-failure-modes, responses-to-failure, knowing-its-healthy]
+- number: 9
+  slug: security
+  title: Security and permissions
+  summary: Who can do what, where, and how to give each part only the access it needs.
+  mapPart: security
+  lessons: [who-can-do-what-where, least-access]
+- number: 10
+  slug: changing-over-time
+  title: Changing the system over time
+  summary: Changing the model without breaking the people using it, and writing down why you decided what you did.
+  mapPart: evolution
+  lessons: [migrations-without-breaking-users, recording-decisions]
+- number: 11
+  slug: the-toolbox
+  title: The toolbox
+  summary: The diagrams, notations and tools worth knowing, and when to reach for each.
+  lessons: [uml-the-useful-parts, c4-zooming-in-and-out, diagrams-as-code, contract-tools, keeping-contracts-honest]
