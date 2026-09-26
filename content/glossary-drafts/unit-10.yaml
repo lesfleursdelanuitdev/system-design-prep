@@ -1,4 +1,0 @@
-- id: dual-write
-  term: Dual write
-  short: During a migration, writing every change to both the old shape and the new one, so the two stay in step until everything reads from the new one.
-  see: [expand-and-contract, migration]

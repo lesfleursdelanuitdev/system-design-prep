@@ -365,7 +365,7 @@ pre.code {
   font-family: var(--font-mono);
   font-size: 0.84rem;
   line-height: 1.55;
-  background: var(--surface-2);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 0.6rem;
   padding: 0.85rem 1rem;
@@ -422,7 +422,8 @@ table.data tr:last-child td {
   color: var(--shiki-dark);
 }
 .shiki {
-  background: var(--surface-2) !important;
+  /* The white surface keeps comment colours above 4.5:1 contrast. */
+  background: var(--surface) !important;
 }
 
 /* Lesson parts (see src/lib/remark.ts) */

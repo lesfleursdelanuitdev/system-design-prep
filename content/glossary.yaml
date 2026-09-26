@@ -610,3 +610,80 @@
   term: Contract test
   short: A test that checks a real response (or request) matches the written contract, so the two can't quietly drift apart.
   see: [contract]
+
+# ---- Added while writing the units --------------------------------------------------
+# The domain model
+- id: belongs-to
+  term: Belongs to
+  short: The “one” end of a one-to-many relationship, when the thing on the “many” side can’t exist without it and can’t move to another. Each item belongs to exactly one source.
+  see: [one-to-many, relationship]
+- id: composite-key
+  term: Composite key
+  short: A key made of more than one value together. A Shelf item is identified by its source id and its item id as a pair, because neither is unique on its own.
+  see: [key, primary-key]
+# Boundaries
+- id: circular-dependency
+  term: Circular dependency
+  short: Two or more parts that depend on each other, directly or round a loop. None of them can then be changed, tested or understood on its own.
+  aka: [dependency cycle]
+  see: [dependency, coupling]
+- id: adapter
+  term: Adapter
+  short: A small piece of code that translates between something outside and the shape a module expects, such as a source kind that reads a sitemap for Shelf’s nightly pull.
+  see: [plug-in-point, registry]
+# The data model
+- id: join-table
+  term: Join table
+  short: A table that stores a many-to-many relationship, one row per link. Shelf’s taggings table is one; each row joins one tag to one item.
+  aka: [link table]
+  see: [many-to-many, tagging]
+- id: audit-log
+  term: Audit log
+  short: A lasting record of who changed what, and when. Shelf writes one when it removes tags from a trashed item, so an admin can see later what went.
+  see: [soft-delete, log]
+# Contracts
+- id: event
+  term: Event
+  short: A message one part of a system sends to say that something has happened, such as “item trashed”, for any part that cares to act on it. Its shape is a contract too.
+  see: [contract, asyncapi]
+- id: opaque-value
+  term: Opaque value
+  short: A value the caller must keep and send back exactly as it got it, without taking it apart, building one itself or reading meaning into it. Cursors and Shelf’s tag ids are opaque.
+  aka: [opaque]
+  see: [cursor, key]
+- id: operation
+  term: Operation
+  short: One thing a caller can ask a provider to do, such as putting a tag on an item, with its own inputs, outputs, preconditions, postconditions and errors.
+  see: [endpoint, precondition, postcondition]
+# Contracts
+- id: behavioural-guarantee
+  term: Behavioural guarantee
+  short: A promise in a contract about how an operation behaves, beyond the shape of its data, such as whether it is safe to repeat, which change wins a race, how fresh answers are and how long it may take.
+  see: [idempotency, ordering, timeout]
+- id: tolerant-reader
+  term: Tolerant reader
+  short: A consumer that ignores fields it doesn’t recognise in what it reads, so the provider can add fields later without breaking it.
+  see: [backward-compatible, breaking-change]
+# When things go wrong
+- id: error-budget
+  term: Error budget
+  short: The room for failure an SLO leaves. At 99.9% a month, 0.1% of requests may fail or be slow, about 43 minutes. With budget left you can take risks; when it runs low, you slow down.
+  see: [slo, sli]
+# Changing over time
+- id: dual-write
+  term: Dual write
+  short: During a migration, writing every change to both the old shape and the new one, so the two stay in step until everything reads from the new one.
+  see: [expand-and-contract, migration]
+# The toolbox
+- id: c4-container
+  term: Container (C4)
+  short: "In the C4 model, a part of a system that runs or stores data on its own, such as a web app, an API service, a background worker or a database. Not the same thing as a Docker container."
+  see: [c4-model]
+- id: consumer-driven-contract
+  term: Consumer-driven contract
+  short: A contract test written by a consumer, listing only what it actually relies on. The provider runs every consumer's tests before it releases, so it knows what a change would break.
+  see: [contract-test, consumer, provider]
+- id: continuous-integration
+  term: Continuous integration (CI)
+  short: Building and testing every change automatically as soon as it is pushed, before it can be merged or released.
+  aka: [CI]

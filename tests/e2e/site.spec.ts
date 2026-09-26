@@ -35,8 +35,8 @@ test('the glossary filters, and links to terms work', async ({ page }) => {
   await page.goto('/glossary/#latency');
   await expect(page.locator('#latency')).toBeInViewport();
   await page.getByLabel('Filter the glossary').fill('idempot');
-  await expect(page.getByRole('heading', { name: 'Idempotency', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Latency', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /^Idempotency\b/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Latency\b/ })).toHaveCount(0);
 });
 
 test.describe('on a phone', () => {
@@ -48,7 +48,7 @@ test.describe('on a phone', () => {
     await page.getByRole('button', { name: 'Open menu' }).click();
     const menu = page.getByRole('dialog', { name: 'Menu' });
     await expect(menu).toBeVisible();
-    await menu.getByRole('button', { name: /Show lessons in unit 1/ }).click();
+    await menu.getByRole('button', { name: 'Show lessons in unit 1', exact: true }).click();
     await menu.getByRole('link', { name: first.title }).click();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(first.title);
     await expect(menu).toBeHidden();
@@ -65,9 +65,11 @@ test.describe('on a phone', () => {
 });
 
 test.describe('accessibility (axe)', () => {
-  const pages = ['/', '/glossary/', '/tools/', '/playground/', '/capstone/', ...lessons().slice(0, 4).map((l) => l.href)];
-  for (const path of pages) {
-    for (const theme of ['light', 'dark'] as const) {
+  // Every page in light mode; the site pages and one lesson per unit in dark mode too.
+  const all = ['/', '/glossary/', '/tools/', '/playground/', '/capstone/', ...lessons().map((l) => l.href)];
+  const dark = new Set(['/', '/glossary/', '/tools/', '/playground/', '/capstone/', ...lessons().filter((l) => l.order === 1).map((l) => l.href)]);
+  for (const path of all) {
+    for (const theme of dark.has(path) ? (['light', 'dark'] as const) : (['light'] as const)) {
       test(`${path} (${theme})`, async ({ page }) => {
         await page.emulateMedia({ colorScheme: theme });
         await page.goto(path);

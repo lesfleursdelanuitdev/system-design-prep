@@ -1,9 +1,0 @@
-# New terms for Unit 6, lessons 6–10 (contracts). Merged into the glossary by the content loader.
-- id: behavioural-guarantee
-  term: Behavioural guarantee
-  short: A promise in a contract about how an operation behaves, beyond the shape of its data, such as whether it is safe to repeat, which change wins a race, how fresh answers are and how long it may take.
-  see: [idempotency, ordering, timeout]
-- id: tolerant-reader
-  term: Tolerant reader
-  short: A consumer that ignores fields it doesn’t recognise in what it reads, so the provider can add fields later without breaking it.
-  see: [backward-compatible, breaking-change]

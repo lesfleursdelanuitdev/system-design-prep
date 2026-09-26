@@ -21,7 +21,7 @@ export function DesignMap({ current, variant = 'full' }: { current?: MapPart; va
             }`;
             const body = (
               <>
-                <span className="tabular-nums opacity-70">{i + 1}</span> {m.label}
+                <span className="tabular-nums">{i + 1}</span> {m.label}
               </>
             );
             return (

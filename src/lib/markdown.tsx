@@ -22,7 +22,7 @@ const LANGS = ['yaml', 'json', 'typescript', 'tsx', 'javascript', 'bash', 'http'
 let highlighter: Promise<HighlighterGeneric<any, any>> | undefined;
 function getHighlighter() {
   highlighter ??= createHighlighter({
-    themes: ['github-light', 'github-dark'],
+    themes: ['github-light-high-contrast', 'github-dark-high-contrast'],
     langs: LANGS,
     engine: createJavaScriptRegexEngine(),
   });
@@ -35,7 +35,7 @@ async function shikiPlugin() {
     rehypeShikiFromHighlighter,
     h,
     {
-      themes: { light: 'github-light', dark: 'github-dark' },
+      themes: { light: 'github-light-high-contrast', dark: 'github-dark-high-contrast' },
       defaultColor: false,
       fallbackLanguage: 'text',
       defaultLanguage: 'text',
