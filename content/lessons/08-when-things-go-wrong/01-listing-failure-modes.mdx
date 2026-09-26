@@ -1,0 +1,76 @@
+---
+unit: 8
+order: 1
+title: Listing failure modes
+summary: For every step in a flow, ask what happens if it fails, if it is slow and if it runs twice. Walked through for Shelf’s push and its nightly pull.
+minutes: 9
+terms: [failure-mode, timeout, idempotency, retry]
+---
+
+## In one sentence
+
+For every step in a flow, ask what happens if it fails, if it’s slow and if it runs twice, and write the answers down: those answers are the flow’s failure modes.
+
+## Example: the push, one step at a time
+
+Take the flow from [Sequence diagrams](/learn/flows-and-state/sequence-diagrams/): the recipe site sends Shelf a batch of changes. It has six steps. The recipe site sends the batch; Shelf checks the key; Shelf checks whether it has seen this request before; Shelf writes the changes; Shelf stores its answer; the answer travels back.
+
+Now take each step and ask three questions. What if it fails? What if it’s slow? What if it happens twice?
+
+| Step | What can go wrong | What happens |
+|---|---|---|
+| Send the batch | **Fails:** the network drops the request. | The app gets a connection error and sends it again. Nothing was applied, so nothing is doubled. |
+| Send the batch | **Slow:** the app gives up waiting. | The app can’t tell whether Shelf applied the batch. It sends it again (see “twice” below). |
+| Check the key | **Fails:** the key is wrong or revoked. | `401 unauthenticated`. Sending again won’t help. The app’s team must fix the key. |
+| Check for a repeat | **Fails:** the database is unreachable. | `503 unavailable` with a `Retry-After` header. The app tries later, and the nightly pull repairs anything it never manages to send. |
+| Write the changes | **Fails** halfway, at change 317 of 500. | The whole batch is one transaction, so none of it is kept. The app gets `503` and sends it again. |
+| Write the changes | **Slow:** 500 changes arrive while 20 lookups a second are being served. | Must finish within 10 s, and lookups must stay fast meanwhile. This one is a requirement to test, not a bug to handle. |
+| Write the changes | **Twice:** the app sends again after a lost answer. | With the same `Idempotency-Key`, Shelf replays its stored answer. Without one, the result is the same anyway: an upsert sets the same title again, a delete marks the same item missing again. |
+| Write the changes | **Slow, and overtaken:** a batch sent earlier arrives after a later one. | A change older than the stored `updatedAt` is ignored, so an old title never overwrites a newer one. |
+| Send the answer | **Fails:** the answer is lost on the way back. | From the app’s side this looks exactly like “slow”. It sends again, and Shelf recognises the repeat. |
+
+Look at the last row. A lost answer is the failure mode that shapes the whole push contract. The caller can’t tell “never arrived” from “done, but the answer got lost”. Its only safe move is to send again. So Shelf had to make sending again harmless.
+
+### The nightly pull
+
+At 02:00 Shelf asks each app for its full list of items, page by page. The steps are different, and so are the answers.
+
+- **A page fails or is slow.** Each page has 10 s. Shelf asks again after 2, 4 and 8 s. If the page still fails, Shelf abandons tonight’s listing and marks **nothing** missing. Tomorrow’s pull tries again.
+- **A page arrives twice.** Harmless. The contract allows an item to appear more than once in a listing.
+- **The cursor is too old.** The app answers `400 invalid_cursor`, and Shelf starts the listing again from the first page.
+- **The app rejects Shelf’s secret.** `401`: Shelf stops and alerts the admin. Asking again would only fail again.
+- **The whole pull runs twice in one night.** Harmless. A second complete listing reaches the same answer as the first.
+- **The listing finishes, but it’s wrong.** A bug in a new release of the photo gallery lists 30,000 of its 45,000 photos and then says `nextCursor: null`. Every step “worked”. Nothing failed, nothing was slow, nothing ran twice.
+
+That last one is the most dangerous item on the list. Taken at its word, the listing says 15,000 photos were deleted, and their tags would start the 30-day countdown. It needs a fourth question: **what if it looks as if it worked, but didn’t?** Shelf’s answer is a guard: if a complete listing would mark more than 20% of a source’s items missing, Shelf holds the run and asks the admin. The next lesson looks at that guard and the other responses.
+
+## The general idea
+
+A <Term id="failure-mode">failure mode</Term> is one specific way a step can go wrong. Listing them is mechanical, and that’s its strength. You don’t need a flash of insight, only a flow and some patience.
+
+1. **Take a flow you’ve drawn**, one arrow at a time.
+2. **Ask the three questions of each arrow.** What if it fails? What if it’s slow? What if it happens twice? Then the quiet fourth: what if it looks fine but isn’t?
+3. **Write down what happens**, from the caller’s side as well as yours.
+4. **Rank them by harm**, using your priorities. For Shelf, anything that could wrongly remove a tag comes first.
+
+Why those three questions:
+
+- **Fails.** Networks drop requests, databases restart, disks fill up. Every call can fail. The question is what the caller sees and what it does next.
+- **Slow.** Slow usually turns into failure, because every caller has a <Term id="timeout">timeout</Term> and gives up. Worse, a caller that gave up doesn’t know whether the work happened.
+- **Twice.** A <Term id="retry">retry</Term> after a timeout, a double click, a job started by two timers. If running twice isn’t harmless, one day it will do harm. Making a step harmless to repeat is called <Term id="idempotency">idempotency</Term>.
+
+Write the list as a table: the step, what can go wrong, what happens, and who notices. The last column leads into [knowing it’s healthy](/learn/when-things-go-wrong/knowing-its-healthy/): a failure nobody notices can quietly go on for weeks.
+
+<Callout type="tip" title="The list should change the design">
+Most of Shelf’s rules came out of this exercise. Pushes are safe to send twice because answers get lost. Changes are ordered by `updatedAt` because batches overtake each other. A failed page marks nothing missing because pages fail. The 20% guard exists because a listing can finish and still be wrong. If your list changes nothing in the design, look harder.
+</Callout>
+
+## Common mistakes
+
+- **Only asking “what if it fails?”** Slow and twice cause more surprises, because nothing reports an error.
+- **Stopping at your own edge.** The caller’s view matters. A lost answer is invisible to Shelf and baffling to the app.
+- **Writing “handle the error” as the answer.** Say what actually happens: which code comes back, who tries again, and what state is left behind.
+
+## Try it
+
+<WriteIt id="u8-retention-job-failures" />

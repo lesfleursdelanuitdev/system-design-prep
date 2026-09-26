@@ -1,0 +1,90 @@
+---
+unit: 6
+order: 7
+title: "Step 6: who may call it"
+summary: Each operation in a contract says how callers prove who they are, which privilege they need and in which scope, and what a refused caller sees. 401 means Shelf doesn’t know you; 403 means it does, and the answer is no.
+minutes: 8
+terms: [authentication, authorisation, api-key, privilege, scope, default-deny]
+---
+
+## In one sentence
+
+Every operation in a contract says who may call it: how callers prove who they are, which privilege they need and where, and what they see when refused.
+
+## Example: the quiz app’s key
+
+When the admin registered the quiz app, Shelf gave it a key. Every request the quiz app makes carries that key in a header: `Authorization: Bearer <the quiz app’s key>`. Shelf stores only a hash of it, so even Shelf can’t read it back.
+
+The key comes with privileges and one scope. This bundle is Shelf’s “App” role.
+
+| The quiz app’s key | |
+|---|---|
+| Privileges | `items:push` (for the source `quizzes` only), `tags:read`, `tags:apply` |
+| Scope | `/learning`, and everything below it, such as `/learning/maths` |
+
+Now follow six requests.
+
+| # | The request | Shelf answers | Why |
+|---|---|---|---|
+| 1 | Anything, with no key in the header | `401 unauthenticated` | Shelf doesn’t know who is calling. |
+| 2 | Anything, with a key the admin revoked yesterday | `401 unauthenticated` | A revoked key identifies nobody. |
+| 3 | Put `algebra` on a maths quiz | `200`, `created: true` | It has `tags:apply`, and both the tag (in `/learning/maths`) and the quiz are inside `/learning`. |
+| 4 | Put `exam-prep` on a photo | `403 forbidden` | The photo lives in `/photos`, outside the key’s scope. |
+| 5 | Create a new tag, `times-tables` | `403 forbidden` | Creating tags needs `tags:manage`. This key doesn’t have it. |
+| 6 | Push changes for the source `photos` | `403 forbidden` | A push key belongs to one source, and this one is `quizzes`. |
+
+Now one request from the admin, whose key has every privilege in `/`. The admin tries to put `vegetarian` on a quiz. The admin may tag anything, anywhere, and Shelf still says no. But this time the answer is `422 tag_out_of_scope`: `vegetarian` lives in `/food`, and a quiz isn’t in `/food` or below it. That refusal isn’t about who is asking. Nobody may do it.
+
+### One rule per operation
+
+Here is the access part of Shelf’s contract. It sits next to each operation’s inputs, outputs and errors, not in a separate security document.
+
+| Operation | Privilege | Extra rule |
+|---|---|---|
+| Send changes: `POST /v1/sources/{sourceId}/changes` | `items:push` | The key belongs to that source. |
+| Look up items by tag: `GET /v1/tags/{tagId}/items` | `tags:read` | The tag is inside the key’s scope. |
+| An item’s tags: `GET /v1/items/{sourceId}/{itemId}/tags` | `tags:read` | The item is inside the key’s scope. |
+| Tag or untag: `PUT` or `DELETE` on `/v1/items/{sourceId}/{itemId}/tags/{tagId}` | `tags:apply` | Both the item and the tag are inside the key’s scope. |
+| Create, rename or delete a tag: `POST /v1/tags`, `PATCH` or `DELETE` on `/v1/tags/{tagId}` | `tags:manage` | The tag’s scope is inside the key’s scope. |
+| Register sources, manage scopes and keys | `admin` | Only for keys in the root scope, `/`. |
+
+The quiz app’s team reads this table to know what to ask the admin for. Shelf’s `access` module enforces it on every request. A tester can turn each row into a check.
+
+### When Shelf is the caller
+
+The nightly pull turns the sides round. Shelf calls each app’s list endpoint, so now the app must check who is calling. At registration the admin gives each app a pull secret, and Shelf sends it as `Authorization: Bearer <pull secret>`. The app compares it and answers `401 unauthenticated` if it’s wrong. It has to: a listing shows every item’s title and link to whoever asks. When Shelf gets a `401`, it stops and alerts the admin instead of retrying, because a wrong secret won’t fix itself.
+
+## The general idea
+
+Access control is two different questions, and each has its own answer in the contract.
+
+1. **<Term id="authentication">Authentication</Term>: who are you?** Shelf checks the <Term id="api-key">API key</Term>. No key, an unknown key or a revoked key all get `401 unauthenticated`. The caller can fix it by sending a valid key.
+2. **<Term id="authorisation">Authorisation</Term>: may you do *this*, *here*?** Shelf knows who you are, and says no: `403 forbidden`. Asking again with the same key will never work. The fix is a different key, or a different request.
+
+A key on its own only answers the first question. The second needs two more things. A <Term id="privilege">privilege</Term> says what kind of thing the key may do (read, apply, manage, push, admin). A <Term id="scope">scope</Term> says where. Shelf bundles privileges into four roles (app, read-only app, curator, admin), so the admin doesn’t hand-pick them for every key.
+
+Behind it all sits <Term id="default-deny">default deny</Term>: a key can do nothing it wasn’t given, and only inside its scope. The contract lists what is allowed. Everything else is refused.
+
+**Check who before anything else.** A caller Shelf can’t identify learns nothing more: not whether the tag exists, not whether its request was well formed. It gets `401`, and that’s all. Only a known, allowed caller hears about `404 tag_not_found` or `422 tag_out_of_scope`.
+
+**Why it belongs in the contract:**
+
+- **Callers build against it.** The quiz app needs to know which key to request, where to put it, and what to do with a `403`. (Stop and ask the admin. Retrying won’t help.)
+- **It’s expensive to add later.** Requiring a key on an endpoint anyone could call is a breaking change: every existing caller starts getting `401` on the same day.
+- **It can be tested.** “A `/learning` key gets `403` when it tags a photo” is a test you can write and run.
+
+<Callout type="tradeoff" title="How fine-grained should privileges be?">
+Shelf has five privileges and a scope tree. It could go further: a privilege per tag, say, or one per operation. Each extra distinction lets a leaked key do less damage. It also makes the contract longer, the admin’s job harder and mistakes in key setup more likely. Shelf stops at five because each one matches a real job someone does.
+</Callout>
+
+[Unit 9](/learn/security/who-can-do-what-where/) looks at roles, scopes and least access in more depth. For the contract, you need the scheme, the privilege, the extra rule and the two errors, for every operation.
+
+## Common mistakes
+
+- **Mixing up 401 and 403.** A `401` tells the caller its key is the problem; a `403` says the key is fine but not allowed. Swap them and people hunt for the fault in the wrong place.
+- **Treating a key as permission.** “Needs a key” says who you are, not what you may do. Name the privilege and the scope for every operation.
+- **Using 403 for a rule about the data.** If nobody at all may do it, such as putting `vegetarian` on a quiz, it isn’t an access question. Say what is wrong with the request (`422 tag_out_of_scope`) so the caller can fix it.
+
+## Try it
+
+<Quiz id="u6-b-401-or-403" />

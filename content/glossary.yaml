@@ -1,0 +1,689 @@
+# Every term a lesson may link to with <Term id="…">. Plain English first.
+# short: one or two sentences (shown in the tooltip). long: optional markdown for the glossary page.
+
+# ---- Designing -----------------------------------------------------------------------
+- id: system-design
+  term: System design
+  short: Deciding the parts of a system, how they talk to each other and what each promises, before writing the code.
+  see: [architecture, trade-off]
+- id: architecture
+  term: Architecture
+  short: The big decisions in a design that are expensive to change later, such as what the main parts are and how they are split.
+  long: A handy test is the *rewrite test*. If getting it wrong means a migration or a rewrite, it's architecture. If you could change it in an afternoon, it's design detail.
+  see: [system-design, migration]
+- id: trade-off
+  term: Trade-off
+  short: A choice where getting more of one good thing means getting less of another, such as freshness against simplicity.
+- id: running-example
+  term: Running example
+  short: One example used all the way through a course, so each lesson adds to the same picture. Here it is Shelf.
+  see: [shelf]
+- id: shelf
+  term: Shelf
+  short: The course's running example. A small labelling service. Other apps keep their items; Shelf lets people tag those items and find them by tag.
+  see: [source, item, tag, scope]
+
+# ---- Shelf's concepts -----------------------------------------------------------------
+- id: source
+  term: Source
+  short: In Shelf, an app that has registered to plug in, such as the recipe site. Each source owns its own items.
+  see: [item, home-scope]
+- id: item
+  term: Item
+  short: In Shelf, one thing that belongs to a source, such as one recipe or one photo. Shelf stores its id, a cached title and link, never the thing itself.
+  see: [source, cache]
+- id: tag
+  term: Tag
+  short: A label people put on items, such as “vegetarian”. In Shelf, each tag is defined in one scope.
+  see: [tagging, scope]
+- id: tagging
+  term: Tagging
+  short: One tag on one item. The link between the two, which Shelf stores and owns.
+  see: [tag, many-to-many]
+- id: scope
+  term: Scope
+  short: A named area that limits what something applies to. In Shelf, scopes form a tree (/, /food, /learning/maths); tags and API keys each work in one scope and everything below it.
+  see: [home-scope, least-privilege]
+- id: home-scope
+  term: Home scope
+  short: The scope a Shelf source is registered in. Its items live there or in scopes below it.
+  see: [scope, source]
+- id: push
+  term: Push
+  short: The sender starts the conversation and sends changes as they happen. In Shelf, an app tells Shelf “these items changed”.
+  see: [pull]
+- id: pull
+  term: Pull
+  short: The receiver starts the conversation and asks for the data, usually on a schedule. In Shelf, a nightly job asks each app for its full list of items.
+  see: [push]
+
+# ---- Requirements ---------------------------------------------------------------------
+- id: requirement
+  term: Requirement
+  short: Something the system must do, or a level it must reach, written so that someone could check whether it does.
+  see: [functional-requirement, non-functional-requirement]
+- id: functional-requirement
+  term: Functional requirement
+  short: What the system must do. “An app can ask for all items with a given tag.”
+  see: [user-story, non-functional-requirement]
+- id: non-functional-requirement
+  term: Non-functional requirement
+  short: How well the system must do it, such as how fast, how reliable or how cheap. Also called a quality requirement.
+  aka: [NFR, quality requirement]
+  see: [quality-attribute]
+- id: user-story
+  term: User story
+  short: "A requirement written from someone's point of view: “As a …, I want …, so that ….”"
+  see: [acceptance-criteria]
+- id: acceptance-criteria
+  term: Acceptance criteria
+  short: The checks that decide whether a story is done. Concrete enough that two people would agree.
+  see: [user-story]
+- id: quality-attribute
+  term: Quality attribute
+  short: One way a system can be good or bad apart from what it does, such as latency, availability or cost.
+  see: [non-functional-requirement]
+- id: latency
+  term: Latency
+  short: How long one request takes, from asking to getting the answer. Usually measured in milliseconds.
+  aka: [response time]
+  see: [percentile, throughput]
+- id: throughput
+  term: Throughput
+  short: How much work the system gets through in a period, such as requests per second.
+  see: [latency, requests-per-second]
+- id: availability
+  term: Availability
+  short: The share of time the system is working and answering, often written as a percentage such as 99.9%.
+  see: [downtime, nines]
+- id: durability
+  term: Durability
+  short: Once the system says it has saved something, it stays saved, even if a machine fails.
+- id: recovery
+  term: Recovery
+  short: Getting back to working after something breaks badly. Measured by how long it takes (RTO) and how much data is lost (RPO).
+  see: [rto, rpo]
+- id: rto
+  term: RTO (recovery time objective)
+  short: The longest you may take to get the system working again after a disaster.
+  see: [rpo, recovery]
+- id: rpo
+  term: RPO (recovery point objective)
+  short: The most recent stretch of data you may lose in a disaster, such as “at most 15 minutes of changes”.
+  see: [rto, backup]
+- id: freshness
+  term: Freshness
+  short: How up to date the data the system shows is. “A change shows up within 5 seconds.”
+  aka: [staleness]
+  see: [cache]
+- id: scalability
+  term: Scalability
+  short: How well the system copes when there is more of something (users, data, traffic), and what it takes to cope.
+- id: security-attribute
+  term: Security
+  short: Keeping the system and its data safe from people who shouldn't use or change them.
+  see: [authentication, authorisation]
+- id: maintainability
+  term: Maintainability
+  short: "How easy it is to change the system safely: fix bugs, add features, plug in new things."
+- id: operability
+  term: Operability
+  short: How easy it is to run the system day to day and to notice and fix problems.
+  see: [metric, alert]
+- id: cost
+  term: Cost
+  short: What the system takes to build and run, in money and in people's time. A requirement like any other.
+- id: measurable
+  term: Measurable
+  short: Written so that someone can check it with a number. “Fast” isn't measurable; “95% within 200 ms” is.
+  see: [percentile]
+- id: percentile
+  term: Percentile
+  short: The value that a given share of measurements fall at or below. The 95th percentile of response times is the time 95% of requests beat.
+  aka: [p95, p99]
+  see: [median, average]
+- id: p95
+  term: p95
+  short: Short for the 95th percentile. “p95 latency 200 ms” means 95% of requests finish within 200 ms.
+  see: [percentile]
+- id: median
+  term: Median
+  short: The middle value when all measurements are sorted. Half are below it, half above. The same as the 50th percentile.
+  aka: [p50]
+  see: [percentile, average]
+- id: average
+  term: Average
+  short: All values added up and divided by how many there are. A few very slow requests can drag it far from what most people see.
+  aka: [mean]
+  see: [median, percentile]
+- id: requests-per-second
+  term: Requests per second
+  short: How many requests arrive each second. The usual way to measure load.
+  aka: [RPS]
+  see: [throughput, peak-factor]
+- id: peak-factor
+  term: Peak factor
+  short: How many times busier the busiest moment is than the average. Used to turn an average rate into a peak one.
+  see: [back-of-the-envelope]
+- id: back-of-the-envelope
+  term: Back-of-the-envelope estimate
+  short: A quick, rough calculation, good to within a factor of two or so, to see which size of solution you need.
+  see: [peak-factor]
+- id: downtime
+  term: Downtime
+  short: Time when the system isn't working for the people using it.
+  see: [availability]
+- id: nines
+  term: Nines
+  short: Shorthand for availability. “Three nines” is 99.9%; each extra nine allows ten times less downtime.
+  see: [availability]
+- id: quality-scenario
+  term: Quality scenario
+  short: "A quality requirement written as a short story in five parts: source, stimulus, environment, response and measure."
+  see: [quality-attribute, measurable]
+- id: constraint
+  term: Constraint
+  short: A fixed fact the design must live with, such as “one server” or “one developer”. Not a goal to reach.
+  see: [requirement]
+- id: priority
+  term: Priority
+  short: The order in which requirements win when they conflict, decided before the conflict happens.
+
+# ---- Domain model -----------------------------------------------------------------
+- id: domain
+  term: Domain
+  short: The part of the world the system is about, with its own words and rules. For Shelf, it's items, tags and scopes.
+- id: domain-model
+  term: Domain model
+  short: The main concepts in the domain, what each one is, and how they relate. Usually drawn as a class diagram.
+  see: [entity, class-diagram]
+- id: entity
+  term: Entity
+  short: A thing in the domain that has its own identity and lasts over time, such as an item or a tag.
+  see: [identity]
+- id: attribute
+  term: Attribute
+  short: A fact about a thing, such as an item's title.
+- id: relationship
+  term: Relationship
+  short: How two kinds of thing are connected, such as “a source owns many items”.
+  see: [one-to-many, many-to-many]
+- id: cardinality
+  term: Cardinality
+  short: How many of one thing can relate to one of another, such as one-to-one, one-to-many or many-to-many.
+- id: one-to-many
+  term: One-to-many
+  short: One thing relates to any number of another, each of which relates to just one of the first. One source, many items.
+  see: [many-to-many]
+- id: many-to-many
+  term: Many-to-many
+  short: Each thing can relate to many of the other, both ways round. An item can have many tags; a tag can be on many items.
+  see: [tagging]
+- id: identity
+  term: Identity
+  short: What makes a thing *that* thing, so you can tell it apart from others and recognise it again later.
+  see: [key]
+- id: key
+  term: Key
+  short: The value (or values) that identifies one thing. In Shelf, an item's key is its source id plus the app's item id.
+  see: [natural-key, surrogate-key]
+- id: natural-key
+  term: Natural key
+  short: A key that already exists in the world or in another system, such as an email address or the app's own item id.
+  see: [surrogate-key]
+- id: surrogate-key
+  term: Surrogate key
+  short: A key made up by the system just to identify something, such as a random id. It has no meaning, so it never needs to change.
+  see: [natural-key]
+- id: stable-key
+  term: Stable key
+  short: A key that never changes for the life of the thing it identifies and is never reused for something else.
+- id: source-of-truth
+  term: Source of truth
+  short: The one place whose copy of a piece of data is correct by definition. Every other copy follows it.
+  see: [cache]
+- id: cache
+  term: Cache
+  short: A copy of data kept somewhere else, usually to be faster or to keep working when the original is far away. It can go out of date.
+  aka: [cached copy]
+  see: [source-of-truth, freshness]
+- id: class-diagram
+  term: Class diagram
+  short: A UML diagram showing kinds of thing, their attributes and how they relate. Good for a domain model.
+  see: [uml]
+
+# ---- Boundaries ------------------------------------------------------------------------
+- id: module
+  term: Module
+  short: A part of the system with a clear job that owns its own data. Other parts ask it; they don't reach in.
+  see: [boundary, interface]
+- id: boundary
+  term: Boundary
+  short: The line around a module. Inside, it can change freely; across the line, it keeps its promises.
+  see: [module, contract]
+- id: interface
+  term: Interface
+  short: The part of a module other parts may use. Everything else is private.
+  see: [contract]
+- id: dependency
+  term: Dependency
+  short: When one part needs another to work. If A calls B, A depends on B.
+- id: coupling
+  term: Coupling
+  short: How much two parts depend on each other's details. Low coupling means you can change one without changing the other.
+  see: [cohesion]
+- id: cohesion
+  term: Cohesion
+  short: How well the things inside one module belong together. High cohesion means one clear job.
+  see: [coupling]
+- id: plug-in-point
+  term: Plug-in point
+  short: A place where new behaviour can be added from outside, without the module that offers it knowing the details.
+  aka: [extension point]
+  see: [registry]
+- id: registry
+  term: Registry
+  short: A list the system looks things up in at runtime. New entries can be added without changing the code that uses the list.
+  see: [plug-in-point]
+
+# ---- Data model ------------------------------------------------------------------------
+- id: data-model
+  term: Data model
+  short: How the data is stored, such as tables, their columns, their keys and the rules that keep them correct.
+  see: [er-diagram, primary-key]
+- id: table
+  term: Table
+  short: In a relational database, a set of rows that all have the same columns.
+- id: primary-key
+  term: Primary key
+  short: The column (or columns) that identify each row of a table. No two rows may share it.
+  see: [foreign-key, key]
+- id: foreign-key
+  term: Foreign key
+  short: A column that points at a row in another table, with a rule that the row must exist.
+  see: [primary-key]
+- id: db-constraint
+  term: Database constraint
+  short: A rule the database itself enforces, such as “unique” or “must not be empty”, so bad data can't get in whatever the code does.
+- id: index
+  term: Index
+  short: An extra structure a database keeps so it can find rows quickly by some column, at the cost of space and slower writes.
+- id: er-diagram
+  term: ER diagram
+  short: An entity-relationship diagram. Shows tables (or entities), their columns and how they point at each other.
+  see: [data-model]
+- id: soft-delete
+  term: Soft delete
+  short: Marking a row as deleted (with a status or a date) instead of removing it, so it can be restored or audited.
+  see: [retention]
+- id: retention
+  term: Retention
+  short: How long data is kept before it is removed for good, and the rule for removing it.
+  see: [soft-delete]
+- id: transaction
+  term: Transaction
+  short: A group of database changes that either all happen or none do.
+- id: denormalisation
+  term: Denormalisation
+  short: Storing the same fact in more than one place, usually to make reads faster, at the cost of keeping the copies in step.
+  see: [cache]
+
+# ---- Contracts -------------------------------------------------------------------------
+- id: contract
+  term: Contract
+  short: A promise between two parts of a system about what one will send, what the other will answer, and how it behaves.
+  see: [provider, consumer]
+- id: provider
+  term: Provider
+  short: The side of a contract that offers something, such as the service that answers requests.
+  see: [consumer]
+- id: consumer
+  term: Consumer
+  short: The side of a contract that uses what the provider offers, such as the app making the requests.
+  see: [provider]
+- id: api
+  term: API
+  short: Application programming interface. The contract a piece of software offers to other software.
+  see: [endpoint]
+- id: endpoint
+  term: Endpoint
+  short: One address in an HTTP API, with a method, such as GET /v1/tags/{tagId}/items.
+- id: resource
+  term: Resource
+  short: A kind of thing an API lets you work with, such as items or tags, usually with its own address.
+- id: http-method
+  term: HTTP method
+  short: The verb of an HTTP request (GET, POST, PUT, PATCH, DELETE), saying what kind of action is asked for.
+- id: status-code
+  term: Status code
+  short: The three-digit number an HTTP response starts with. 2xx means it worked, 4xx means the caller got something wrong, 5xx means the server did.
+- id: error-code
+  term: Error code
+  short: A short, stable name for one kind of failure, such as tag_out_of_scope, that callers can check in code.
+  see: [status-code]
+- id: precondition
+  term: Precondition
+  short: What must be true before an operation is called for it to work, such as “the item exists”.
+  see: [postcondition]
+- id: postcondition
+  term: Postcondition
+  short: What is guaranteed to be true after an operation succeeds, such as “the item has the tag”.
+  see: [precondition]
+- id: idempotency
+  term: Idempotency
+  short: Doing something twice has the same effect as doing it once. An idempotent request is safe to retry.
+  aka: [idempotent]
+  see: [idempotency-key, retry]
+- id: idempotency-key
+  term: Idempotency key
+  short: A unique value a caller sends with a request so the server can recognise a repeat and return the first answer instead of doing the work again.
+  see: [idempotency]
+- id: ordering
+  term: Ordering guarantee
+  short: A promise about the order things happen or arrive in, or what happens when they don't arrive in order.
+- id: pagination
+  term: Pagination
+  short: Returning a long list a page at a time, with a way for the caller to ask for the next page.
+  see: [cursor]
+- id: cursor
+  term: Cursor
+  short: A marker returned with one page of results that the caller sends back to get the next page. The caller shouldn't read anything into it.
+  see: [pagination]
+- id: rate-limit
+  term: Rate limit
+  short: A cap on how many requests a caller may make in a period. Past it, the server answers “too many requests” (429).
+- id: timeout
+  term: Timeout
+  short: How long a caller waits for an answer before giving up.
+  see: [retry]
+- id: authentication
+  term: Authentication
+  short: Checking who the caller is, for example by checking their API key.
+  see: [authorisation]
+- id: authorisation
+  term: Authorisation
+  short: Checking whether the caller, now that we know who they are, is allowed to do this particular thing.
+  aka: [authorization]
+  see: [authentication, privilege]
+- id: api-key
+  term: API key
+  short: A secret string a program sends with each request to prove which caller it is.
+  see: [authentication]
+- id: privilege
+  term: Privilege
+  short: Permission to do one kind of thing, such as tags:apply. A key has a set of privileges.
+  aka: [permission]
+  see: [role, scope]
+- id: breaking-change
+  term: Breaking change
+  short: A change to a contract that makes existing, correct consumers fail, such as removing a field or changing what one means.
+  see: [backward-compatible, versioning]
+- id: backward-compatible
+  term: Backward compatible
+  short: A change that existing consumers won't notice, such as adding an optional field.
+  see: [breaking-change]
+- id: versioning
+  term: Versioning
+  short: Giving a contract version numbers (/v1, /v2) so a breaking change can live alongside the old version while consumers move.
+  see: [breaking-change, deprecation]
+- id: deprecation
+  term: Deprecation
+  short: Announcing that something will be removed, and when, while it still works, so users have time to move.
+- id: schema
+  term: Schema
+  short: A precise description of the shape of some data, such as which fields a JSON object has and what type each is.
+  see: [json-schema]
+- id: openapi
+  term: OpenAPI
+  short: A standard format (YAML or JSON) for describing an HTTP API completely, so tools can generate docs, clients and tests from it.
+  see: [json-schema, contract]
+- id: json-schema
+  term: JSON Schema
+  short: A standard way to describe the shape of JSON data. Any language can check a document against it.
+  see: [openapi, schema]
+- id: zod
+  term: Zod
+  short: A TypeScript library for describing data shapes in code. It checks data at runtime and gives you matching types.
+  see: [schema]
+- id: asyncapi
+  term: AsyncAPI
+  short: Like OpenAPI, but for message-based systems (events and queues) rather than request and response.
+- id: protobuf
+  term: Protocol Buffers
+  short: Google's compact binary format and schema language, used by gRPC. Fields are numbered, which makes evolving it safe.
+  aka: [Protobuf]
+
+# ---- Flows and state -------------------------------------------------------------------
+- id: flow
+  term: Flow
+  short: The steps that happen, in order, when something occurs, such as an app pushing a change.
+  see: [sequence-diagram]
+- id: sequence-diagram
+  term: Sequence diagram
+  short: A diagram with one column per participant and arrows going down the page in time order, showing who calls whom.
+  see: [flow, uml]
+- id: state
+  term: State
+  short: One of the stages a thing can be in, such as present, missing or trashed.
+  see: [state-diagram, transition]
+- id: transition
+  term: Transition
+  short: A move from one state to another, and the event that causes it.
+  see: [state]
+- id: state-diagram
+  term: State diagram
+  short: A diagram of the states a thing can be in and the transitions between them.
+  aka: [state machine]
+  see: [state, transition]
+
+# ---- Failure and operations -------------------------------------------------------------
+- id: failure-mode
+  term: Failure mode
+  short: One specific way a step can go wrong, such as failing, being slow or running twice.
+- id: retry
+  term: Retry
+  short: Trying a failed request again. Safe only if the request is idempotent.
+  see: [backoff, idempotency]
+- id: backoff
+  term: Backoff
+  short: Waiting longer between each retry (say 2, 4, then 8 seconds) so a struggling system isn't hit harder.
+  aka: [exponential backoff]
+  see: [retry]
+- id: rollback
+  term: Rollback
+  short: Undoing a change that failed partway, so the system is back where it started.
+  see: [transaction]
+- id: graceful-degradation
+  term: Graceful degradation
+  short: Keeping the most important things working, perhaps in a reduced way, when part of the system fails.
+  aka: [degrade]
+- id: circuit-breaker
+  term: Circuit breaker
+  short: A guard that stops an action when something looks wrong (too many failures, a suspicious result) and waits for a person or a timer before carrying on.
+- id: alert
+  term: Alert
+  short: A message to a person that something needs attention now.
+  see: [metric, slo]
+- id: health-check
+  term: Health check
+  short: A simple request (such as /healthz) that answers whether the system, or one part of it, is working.
+- id: log
+  term: Log
+  short: A timestamped record of events the system writes as it runs, for finding out what happened.
+- id: metric
+  term: Metric
+  short: A number the system records over time, such as requests per second or error count.
+  see: [sli]
+- id: sli
+  term: SLI (service level indicator)
+  short: A measurement of how well the service is doing for its users, such as the share of lookups answered within 500 ms.
+  see: [slo]
+- id: slo
+  term: SLO (service level objective)
+  short: The target for an SLI, such as “99.9% of lookups answered within 500 ms each month”.
+  see: [sli, sla]
+- id: sla
+  term: SLA (service level agreement)
+  short: An SLO written into an agreement with a customer, usually with a penalty if it is missed.
+  see: [slo]
+- id: backup
+  term: Backup
+  short: A copy of the data kept somewhere else so it can be restored after a loss.
+  see: [rpo]
+
+# ---- Security ------------------------------------------------------------------------
+- id: role
+  term: Role
+  short: A named bundle of privileges given to a kind of user, such as “curator”.
+  see: [privilege]
+- id: least-privilege
+  term: Least privilege
+  short: Giving each person or program only the access it needs for its job, and no more.
+  aka: [least access]
+  see: [default-deny]
+- id: default-deny
+  term: Default deny
+  short: Anything not explicitly allowed is forbidden.
+  see: [least-privilege]
+- id: blast-radius
+  term: Blast radius
+  short: How much damage one failure or one leaked secret can do. Smaller is better.
+- id: hashing
+  term: Hashing
+  short: Turning a secret into a scrambled fingerprint that can check the secret later but can't be turned back into it.
+
+# ---- Evolution --------------------------------------------------------------------------
+- id: migration
+  term: Migration
+  short: Moving a live system from an old shape (of data or of a contract) to a new one.
+  see: [expand-and-contract, backfill]
+- id: expand-and-contract
+  term: Expand and contract
+  short: Changing something in safe steps. First add the new alongside the old, then move everyone over, then remove the old.
+  aka: [parallel change]
+  see: [migration]
+- id: backfill
+  term: Backfill
+  short: Filling a new column or table with values for all the rows that existed before it did.
+  see: [migration]
+- id: adr
+  term: ADR (architecture decision record)
+  short: "A short note recording one decision: its context, the options considered, the choice made and its consequences."
+  see: [trade-off]
+
+# ---- Toolbox ---------------------------------------------------------------------------
+- id: uml
+  term: UML
+  short: The Unified Modeling Language. A standard set of diagram types for software. A handful of them are worth knowing.
+  see: [class-diagram, sequence-diagram, state-diagram]
+- id: component-diagram
+  term: Component diagram
+  short: A diagram of the parts of a system and which ones depend on which.
+- id: activity-diagram
+  term: Activity diagram
+  short: A flowchart of a process, with steps, decisions and loops.
+- id: c4-model
+  term: C4 model
+  short: A way of drawing software at four zoom levels (context, containers, components and code), each with its own diagram.
+- id: diagrams-as-code
+  term: Diagrams as code
+  short: Writing diagrams as text that a tool turns into pictures, so they can be committed, reviewed and diffed like code.
+  see: [mermaid]
+- id: mermaid
+  term: Mermaid
+  short: A text format for diagrams (flowcharts, sequence, class, state, ER and more) that many tools render, including this site.
+  see: [diagrams-as-code]
+- id: plantuml
+  term: PlantUML
+  short: An older, very complete diagrams-as-code tool, strong on UML diagrams.
+- id: structurizr
+  term: Structurizr
+  short: A diagrams-as-code tool built for the C4 model. You describe the system once and it draws every zoom level.
+  see: [c4-model]
+- id: d2
+  term: D2
+  short: A modern diagrams-as-code language with good automatic layout.
+- id: dbml
+  term: DBML
+  short: Database Markup Language. A short text format for describing tables and their relationships.
+- id: contract-test
+  term: Contract test
+  short: A test that checks a real response (or request) matches the written contract, so the two can't quietly drift apart.
+  see: [contract]
+
+# ---- Added while writing the units --------------------------------------------------
+# The domain model
+- id: belongs-to
+  term: Belongs to
+  short: The “one” end of a one-to-many relationship, when the thing on the “many” side can’t exist without it and can’t move to another. Each item belongs to exactly one source.
+  see: [one-to-many, relationship]
+- id: composite-key
+  term: Composite key
+  short: A key made of more than one value together. A Shelf item is identified by its source id and its item id as a pair, because neither is unique on its own.
+  see: [key, primary-key]
+# Boundaries
+- id: circular-dependency
+  term: Circular dependency
+  short: Two or more parts that depend on each other, directly or round a loop. None of them can then be changed, tested or understood on its own.
+  aka: [dependency cycle]
+  see: [dependency, coupling]
+- id: adapter
+  term: Adapter
+  short: A small piece of code that translates between something outside and the shape a module expects, such as a source kind that reads a sitemap for Shelf’s nightly pull.
+  see: [plug-in-point, registry]
+# The data model
+- id: join-table
+  term: Join table
+  short: A table that stores a many-to-many relationship, one row per link. Shelf’s taggings table is one; each row joins one tag to one item.
+  aka: [link table]
+  see: [many-to-many, tagging]
+- id: audit-log
+  term: Audit log
+  short: A lasting record of who changed what, and when. Shelf writes one when it removes tags from a trashed item, so an admin can see later what went.
+  see: [soft-delete, log]
+# Contracts
+- id: event
+  term: Event
+  short: A message one part of a system sends to say that something has happened, such as “item trashed”, for any part that cares to act on it. Its shape is a contract too.
+  see: [contract, asyncapi]
+- id: opaque-value
+  term: Opaque value
+  short: A value the caller must keep and send back exactly as it got it, without taking it apart, building one itself or reading meaning into it. Cursors and Shelf’s tag ids are opaque.
+  aka: [opaque]
+  see: [cursor, key]
+- id: operation
+  term: Operation
+  short: One thing a caller can ask a provider to do, such as putting a tag on an item, with its own inputs, outputs, preconditions, postconditions and errors.
+  see: [endpoint, precondition, postcondition]
+# Contracts
+- id: behavioural-guarantee
+  term: Behavioural guarantee
+  short: A promise in a contract about how an operation behaves, beyond the shape of its data, such as whether it is safe to repeat, which change wins a race, how fresh answers are and how long it may take.
+  see: [idempotency, ordering, timeout]
+- id: tolerant-reader
+  term: Tolerant reader
+  short: A consumer that ignores fields it doesn’t recognise in what it reads, so the provider can add fields later without breaking it.
+  see: [backward-compatible, breaking-change]
+# When things go wrong
+- id: error-budget
+  term: Error budget
+  short: The room for failure an SLO leaves. At 99.9% a month, 0.1% of requests may fail or be slow, about 43 minutes. With budget left you can take risks; when it runs low, you slow down.
+  see: [slo, sli]
+# Changing over time
+- id: dual-write
+  term: Dual write
+  short: During a migration, writing every change to both the old shape and the new one, so the two stay in step until everything reads from the new one.
+  see: [expand-and-contract, migration]
+# The toolbox
+- id: c4-container
+  term: Container (C4)
+  short: "In the C4 model, a part of a system that runs or stores data on its own, such as a web app, an API service, a background worker or a database. Not the same thing as a Docker container."
+  see: [c4-model]
+- id: consumer-driven-contract
+  term: Consumer-driven contract
+  short: A contract test written by a consumer, listing only what it actually relies on. The provider runs every consumer's tests before it releases, so it knows what a change would break.
+  see: [contract-test, consumer, provider]
+- id: continuous-integration
+  term: Continuous integration (CI)
+  short: Building and testing every change automatically as soon as it is pushed, before it can be merged or released.
+  aka: [CI]

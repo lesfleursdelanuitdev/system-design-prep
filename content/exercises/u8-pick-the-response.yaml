@@ -1,0 +1,48 @@
+id: u8-pick-the-response
+type: sort
+title: Pick the response
+intro: Each line is something going wrong in Shelf. Choose the response that fits it best.
+buckets:
+  - id: retry
+    label: Retry
+    hint: Try again, with backoff and a limit.
+  - id: roll-back
+    label: Roll back
+    hint: Undo the part that was done.
+  - id: degrade
+    label: Degrade
+    hint: Keep the important part working, in a reduced way.
+  - id: stop-and-tell
+    label: Stop and tell a person
+    hint: Alert, or hold the work until someone looks.
+items:
+  - text: A page of the nightly pull takes longer than 10 s to arrive
+    bucket: retry
+    reason: Probably brief, and asking for a page is a read, so it’s safe to ask again after 2, 4 and 8 s.
+  - text: The database fails at change 317 of a 500-change push
+    bucket: roll-back
+    reason: The batch is one transaction, so the 316 changes already made are undone. The app then sends the whole batch again.
+  - text: Lookups jump to 60 a second after the recipe site’s newsletter goes out
+    bucket: degrade
+    reason: Answer popular lookups from the 30 s cache. Answers may be a few seconds old, but lookups stay up.
+  - text: A complete listing would mark 30% of the quiz app’s items missing
+    bucket: stop-and-tell
+    reason: Over the 20% line. Every step worked, but the result looks wrong, so Shelf holds the run and asks the admin. That’s the circuit breaker.
+  - text: The recipe site gets `503 unavailable` with `Retry-After` when it pushes
+    bucket: retry
+    reason: The server is telling it to try again later. Pushes are safe to send twice, so the app waits and resends.
+  - text: The retention job crashes in the middle of a batch
+    bucket: roll-back
+    reason: Each batch is a transaction, so the half-done batch is undone. The next hourly run picks up the same items again.
+  - text: The photo gallery answers `401` to Shelf’s pull secret
+    bucket: stop-and-tell
+    reason: A wrong secret won’t fix itself, so retrying is pointless. Shelf stops and alerts the admin.
+  - text: One script at the quiz app sends 200 lookups a second
+    bucket: degrade
+    reason: Its key hits the rate limit and gets `429`. That one caller gets less, so every other app stays fast.
+  - text: The disk on Shelf’s server passes 80% full
+    bucket: stop-and-tell
+    reason: Nothing has failed yet, but a person must act before it does. It’s one of Shelf’s alerts.
+  - text: A curator’s tagging request gets no answer because the Wi-Fi dropped
+    bucket: retry
+    reason: "Tagging is safe to repeat. If the first attempt worked, the second answers `created: false` and nothing changes."

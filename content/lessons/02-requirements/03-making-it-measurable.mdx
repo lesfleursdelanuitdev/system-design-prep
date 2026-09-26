@@ -1,0 +1,101 @@
+---
+unit: 2
+order: 3
+title: Making a requirement measurable
+summary: “Fast” is a wish. A requirement names a number, a share of requests and a load, so anyone can check it. Why percentiles tell you more than averages.
+minutes: 9
+terms: [measurable, percentile, p95, median, average, latency]
+---
+
+## In one sentence
+
+“Fast” is a wish; “95% of requests finish within 200 ms at 20 requests per second” is a requirement, because anyone can measure it and get the same answer.
+
+## Example: “lookups should be fast”
+
+Shelf’s first draft said “Lookups should be fast.” Everyone agreed. Then three people read it:
+
+- The quiz app team took it to mean under a second, because their pages are slow to load anyway.
+- The photo gallery team took it to mean under 100 ms, because they show tags while you scroll.
+- The admin took it to mean “nobody has complained yet”.
+
+A month later the gallery team complains. Is Shelf meeting its requirement? Nobody can say. Every one of those readings fits, because the requirement doesn’t say anything precise enough to be wrong.
+
+<Compare>
+<Side title="A wish" tone="bad">
+Lookups should be fast.
+</Side>
+<Side title="A requirement" tone="good">
+95% of lookups finish within 200 ms, and 99% within 500 ms, at 20 requests per second, measured at Shelf’s front door.
+</Side>
+</Compare>
+
+The requirement has five parts, and each one closes a gap:
+
+| Part | Shelf | Without it |
+|---|---|---|
+| What | Lookups | Different operations need different targets. |
+| A number with a unit | 200 ms | “Fast” means whatever the reader wants. |
+| What share of requests | 95% (and 99% within 500 ms) | One slow request would break an “every request” rule. |
+| Under what load | 20 requests per second | Anything is quick when nobody else is using it. |
+| Where it’s measured | Shelf’s front door, where requests arrive | The app’s own network adds time Shelf can’t control. |
+
+### Why “95% of requests” and not “on average”
+
+Here are 20 lookups from one quiet minute, sorted from fastest to slowest. Three lines cross them: the average, the median and the 95th percentile.
+
+<ResponseTimeChart />
+
+In the normal minute, most lookups take 45–160 ms. The **average** (add them all up, divide by 20) is 106 ms. The **median** (the middle one) is 80 ms. The **95th percentile** is 210 ms: 19 of the 20 lookups finished in 210 ms or less.
+
+Look at that last number again. 210 ms is over Shelf’s 200 ms target, and the average of 106 ms gives no hint of it.
+
+Now press “One request gets stuck”. One lookup takes 3,000 ms instead of 380 ms. The average more than doubles, to 237 ms, yet 19 people saw exactly what they saw before. The median and the 95th percentile don’t move.
+
+So the average fails in both directions:
+
+- **It jumps for one outlier.** One stuck request makes it look as if everyone slowed down.
+- **It hides a slow minority.** If one lookup in 20 took 2 s every minute, the average would still be under 200 ms, and one gallery user in 20 would be staring at a spinner.
+
+A percentile answers the question people care about: how long do *most* people wait, and how long do the unlucky ones wait? That’s why Shelf sets two. 95% within 200 ms covers the typical case. 99% within 500 ms stops the slowest requests from drifting unnoticed, including a stuck one like the one in the chart.
+
+## The general idea
+
+A requirement is <Term id="measurable">measurable</Term> when someone can check it with a number, and anyone else checking would get the same answer. For something like <Term id="latency">latency</Term>, that takes the five parts above: what, a number, a share, a load and a place.
+
+The share is written as a <Term id="percentile">percentile</Term>. Sort all the measurements from fastest to slowest. The 95th percentile, or <Term id="p95">p95</Term>, is the time that 95% of them beat. The <Term id="median">median</Term> is the middle value, the 50th percentile. The <Term id="average">average</Term> adds everything up and divides, which is why one extreme value can drag it so far.
+
+The same idea works for every quality in [the last lesson](/learn/requirements/how-well-it-must-do-it/):
+
+| Wish | Measurable |
+|---|---|
+| Highly available | Lookups are up for 99.9% of each calendar month. |
+| Changes show up quickly | A pushed change shows in lookups within 5 s for 95% of batches. |
+| Never loses data | No tag change is lost once Shelf has said “OK”. |
+| Cheap to run | Runs for under $40 a month. |
+
+“Never loses data” became measurable by being precise: which data (tag changes), and from what moment (once Shelf has said “OK”). A count that must be zero is a number too, and you can test it: tag an item, pull the plug the moment Shelf answers, restart, and look.
+
+Words that usually mean “not measurable yet”: *fast*, *quick*, *scalable*, *reliable*, *robust*, *real time*, *user-friendly*, *as soon as possible*, *usually*. When you meet one, ask “how would I check that?”
+
+<Callout type="warning" title="Measurable isn’t the same as sensible">
+“99% of lookups within 5 ms” is perfectly measurable, and would cost far more than Shelf’s $40 a month. Making a target measurable lets you argue about the number. It doesn’t make the number right.
+</Callout>
+
+<GoDeeper title="Percentiles need plenty of requests">
+
+With 20 requests, the 95th percentile is the 19th value, the second slowest. The 99th is the slowest one. Real measurements use thousands of requests over a fixed window, such as each minute or each hour, and a monitoring tool does the counting.
+
+Two more cautions. You can’t average percentiles: the p95 of two servers together isn’t the average of their two p95s, so combine the raw measurements instead. And pick the window deliberately, so a quiet night can’t hide a bad lunchtime.
+
+</GoDeeper>
+
+## Common mistakes
+
+- **Using the average.** It jumps for one outlier and hides a slow minority. Use a percentile, and often two (p95 and p99).
+- **Leaving out the load.** 200 ms at one request a second proves little. Say how busy Shelf is while you measure.
+- **A number with no share or period.** “Within 200 ms” for *every* request fails on the first slow one. “99.9% available” means little until you say per month or per year.
+
+## Try it
+
+<Sort id="u2-is-it-measurable" />

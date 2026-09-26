@@ -1,0 +1,50 @@
+id: u2-nines
+type: quiz
+title: Nines in minutes
+intro: The calculator above will help with the arithmetic.
+questions:
+  - prompt: Shelf’s lookups promise 99.9% a month. Last month they were down for 25 minutes after a bad release and 25 minutes during a server move. Did Shelf meet its target?
+    options:
+      - text: Yes. 50 minutes is under an hour
+        explanation: The budget at 99.9% isn’t an hour. It’s about 43 min 50 s in an average month.
+      - text: No. 50 minutes is more than the 43-minute budget
+        correct: true
+        explanation: Right. Separate outages add up against one monthly budget, and planned work like a server move counts too.
+      - text: Yes. Each outage on its own was under 43 minutes
+        explanation: The budget is for the whole month, added up. An outage doesn’t get a fresh budget of its own.
+  - prompt: The admin screens promise 99%. Roughly how much downtime can they have in a month?
+    options:
+      - text: About 43 minutes
+        explanation: That’s 99.9%. One nine fewer allows ten times more downtime.
+      - text: About 7 hours
+        correct: true
+        explanation: Right. 1% of an average month is about 7 h 18 min. Enough for a broken screen at 2am to wait until morning.
+      - text: About 3.6 days
+        explanation: That’s 1% of a year. Per month it’s about 7 hours.
+  - prompt: A lookup needs Shelf’s program (99.9%) and Postgres (99.9%) both to be up. About how available are lookups?
+    options:
+      - text: 99.9%
+        explanation: Only if the two never fail at different times. When either one being down breaks the lookup, their availabilities multiply.
+      - text: About 99.8%
+        correct: true
+        explanation: Right. 0.999 × 0.999 ≈ 0.998. That allows about 1 h 28 min of downtime a month, twice Shelf’s budget.
+      - text: Better than 99.9%, because there are two parts
+        explanation: Two parts help only when either one can do the job alone, like two copies of the same server. Here the lookup needs both, so each one’s downtime adds to the other’s.
+  - prompt: Shelf deploys twice a week, and each deploy takes lookups down for 2 minutes. How much of the 99.9% monthly budget do deploys use?
+    options:
+      - text: About 4 minutes, under a tenth of it
+        explanation: That’s one week’s deploys. A month has about four and a third weeks, so roughly 9 deploys.
+      - text: About 17 minutes, around 40% of it
+        correct: true
+        explanation: Right. About 9 deploys × 2 minutes. Planned downtime counts, so deploys alone use well over a third of the month’s 43 minutes.
+      - text: None. Planned downtime doesn’t count
+        explanation: Some agreements leave out planned maintenance. Shelf’s doesn’t, because an app can’t tell a deploy from a crash.
+  - prompt: Why doesn’t Shelf aim for 99.99% for lookups?
+    options:
+      - text: Because no system can reach it
+        explanation: Large services do reach it, with spare servers that take over automatically and people on call around the clock.
+      - text: Because 4 minutes a month is too little for one person to notice and fix anything, so it would need spare servers that Shelf’s constraints rule out
+        correct: true
+        explanation: Right. Four nines needs machines that take over by themselves. One server, one developer and under $40 a month can honestly promise three nines.
+      - text: Because 99.9% and 99.99% allow about the same downtime
+        explanation: Each extra nine allows ten times less, about 43 minutes a month against about 4.

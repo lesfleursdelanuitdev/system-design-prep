@@ -1,0 +1,84 @@
+---
+unit: 3
+order: 4
+title: Who owns the truth
+summary: Every piece of data has one owner whose copy is right by definition. Apps own their items; Shelf owns scopes, tags, taggings and keys, and keeps small cached copies of the rest.
+minutes: 9
+terms: [source-of-truth, cache, freshness, push, pull]
+---
+
+## In one sentence
+
+For each piece of data, exactly one place is its source of truth and every other copy follows it: in Shelf, the apps own their items, and Shelf owns scopes, tags, taggings and keys.
+
+## Example: the typo in Shelf’s admin screen
+
+A curator is browsing Shelf’s admin screen and spots a recipe called “Lemon trat”. The fix looks obvious: click the title, correct it, save.
+
+Suppose Shelf allowed that. Three things would go wrong:
+
+1. The recipe site still says “Lemon trat”. Its users, who never see Shelf, still see the typo.
+2. The next time the recipe site pushes a change to that recipe, or at the next nightly pull, Shelf’s title is replaced with the app’s. The curator’s fix quietly vanishes.
+3. Until then, Shelf and the recipe site disagree, and nobody can say which title is right.
+
+The title belongs to the recipe site. Shelf keeps a copy only so that lookups can show a title without asking the recipe site every time. The right fix is to correct the recipe on the recipe site. The recipe site pushes the change, and Shelf’s copy follows within seconds.
+
+### The other direction
+
+Now turn it round. The recipe site has a “Vegetarian” filter. To keep it quick, the recipe site keeps its own list of which recipes have the tag `vegetarian`. A curator removes the tag from one recipe in Shelf.
+
+The recipe site’s list is now wrong. Shelf owns taggings, and the recipe site holds a copy. That copy has to follow Shelf, by asking again after a while. And the recipe site must never add a recipe to its own list without tagging it in Shelf, or the two will drift apart for good.
+
+### Shelf’s ownership table
+
+Do this for every piece of data and you get a table like this one.
+
+| Data | Owner | Copies | How copies catch up |
+|---|---|---|---|
+| Whether an item exists | The app | Shelf’s item status | A pushed `delete`, or the nightly pull |
+| An item’s title and link | The app | Shelf’s cached title and link | Every push and every nightly pull |
+| Which scope an item is in | The app | Shelf’s item record | Every push and every nightly pull |
+| The item itself (ingredients, a photo’s pixels) | The app | None: Shelf may not store content | Nothing to catch up |
+| Scopes | Shelf (the admin) | None | Nothing to catch up |
+| Tags, their names and old names | Shelf | Apps may cache lookups | The app asks again |
+| Taggings | Shelf | Apps may cache lookups | The app asks again |
+| API keys and privileges | Shelf | None: Shelf stores a hash, the key holder the secret | Nothing to catch up |
+
+Look at how the table splits. Everything about *what the item is* belongs to the app. Everything about *how Shelf labels it* belongs to Shelf. Shelf’s own facts about an item (its tags) are stored next to the item’s key, never mixed into the app’s data.
+
+### Status: Shelf’s view of the app’s truth
+
+One column deserves a closer look. Whether recipe `1042` exists is the recipe site’s truth. Shelf’s *status* for it (present, missing, trashed) is Shelf’s own record of what it has seen: a push said “deleted”, or the item didn’t appear in a complete listing. The two usually agree.
+
+When they might not, Shelf leans towards keeping tags. A listing that failed halfway marks nothing missing. A missing item keeps its tags for 30 days in case the app says otherwise. Shelf’s first priority is never to lose or wrongly remove a tag, so it waits before trusting bad news.
+
+## The general idea
+
+The <Term id="source-of-truth">source of truth</Term> for a piece of data is the one place whose copy is right by definition. Any other copy is a <Term id="cache">cache</Term>: kept somewhere else, usually for speed, or to keep working when the owner is far away or down.
+
+Every copy costs something. It can be out of date, and how far out of date it may be is a <Term id="freshness">freshness</Term> requirement. Shelf’s are: a pushed change shows within 5 s, an unpushed one within 24 hours. The <Term id="push">push</Term> keeps copies fresh; the nightly <Term id="pull">pull</Term> repairs anything the push missed.
+
+For each piece of data in a design, answer three questions and write the answers down:
+
+1. **Who creates it, and who may change it?** That’s the owner. There is exactly one.
+2. **Where do copies live, and why?** Every copy needs a reason.
+3. **How do copies catch up, and how stale may they be?** A copy with no way to catch up will be wrong one day.
+
+Two rules follow:
+
+- **Change data at its owner, never in a copy.** A change to a copy will be overwritten, and until then it creates a second truth.
+- **Keep your own facts separate.** When Shelf needs to say something about an item, such as its tags, it stores that in its own data, keyed by the item’s identity. It never edits the app’s fields to do it.
+
+<Callout type="tradeoff" title="Why keep a copy at all?">
+Shelf could store no titles and ask each app for them on every lookup. Titles would never be stale. But every lookup would wait for the slowest app, and would fail whenever any app was down: lookups could never be more available than the apps behind them. Shelf needs lookups to be up 99.9% of the time and 95% of them to finish within 200 ms. So it keeps a small copy (a title and a link, never the item’s content) and accepts that the copy can be a few seconds, or at worst a day, behind.
+</Callout>
+
+## Common mistakes
+
+- **Two owners.** If curators can edit titles in Shelf and apps push titles too, whichever wrote last wins, and nobody notices what was lost.
+- **A copy with no way to catch up.** If nothing refreshes a copy, it silently drifts away from the truth.
+- **Copying more than you need.** Every copied field is one more thing to keep fresh. Shelf copies a title and a link, and its constraints forbid copying the item itself.
+
+## Try it
+
+<Sort id="u3-who-owns-it" />

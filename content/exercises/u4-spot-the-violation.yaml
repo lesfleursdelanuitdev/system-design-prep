@@ -1,0 +1,75 @@
+id: u4-spot-the-violation
+type: quiz
+title: Spot the boundary violation
+intro: Three small designs for parts of Shelf. Each one crosses a boundary it shouldn’t. Try to spot the problem before you read the options.
+questions:
+  - prompt: |
+      **Design 1.** The nightly pull, in `sync`:
+
+      ```ts
+      for (const source of await sources.all()) {
+        let items;
+        if (source.id === "recipes") {
+          items = await fetchRecipeFeed(source.listUrl);
+        } else if (source.id === "photos") {
+          items = await fetchGalleryPages(source.listUrl, { pageSize: 200 });
+        } else {
+          items = await fetchHttpList(source.listUrl);
+        }
+        await applyListing(source, items);
+      }
+      ```
+
+      What’s wrong?
+    options:
+      - text: The sources should be pulled in parallel, not one after another
+        explanation: That’s a speed question, and at 02:00 speed hardly matters. It isn’t a boundary problem.
+      - text: "`sync` should read the `sources` table directly instead of calling `sources.all()`"
+        explanation: That would make it worse. Asking the `sources` module is exactly right; reading its table would be a second violation.
+      - text: "`sync` knows individual apps by id. Each way of listing should be a source kind in the registry, chosen by the source’s `kind`, with things like page size as configuration"
+        correct: true
+        explanation: Right. Every new app with a quirk means editing `sync`, the module that guards the “only a complete listing marks items missing” rule. Shelf should know kinds, never apps.
+      - text: The loop should stop at the first source whose pull fails
+        explanation: Each source’s pull stands alone. One broken app shouldn’t stop the others from being refreshed.
+  - prompt: |
+      **Design 2.** A proposed module table:
+
+      | Module | Owns | May call |
+      |---|---|---|
+      | `scopes` | the scope tree | `tagging` (to refuse deleting a scope that still has tags) |
+      | `tagging` | tags, aliases, taggings | `catalog`, `scopes` |
+      | `catalog` | items | `scopes`, `sources` |
+
+      What’s wrong?
+    options:
+      - text: "`tagging` shouldn’t call `scopes`"
+        explanation: It must. Checking that a tag fits an item (its scope or below) needs the scope tree, and `scopes` owns it.
+      - text: "`scopes`, the bottom module, now depends on `tagging`, which depends on `scopes`: a circular dependency. The check belongs higher up, for example in `api`, which asks `tagging` before asking `scopes` to delete"
+        correct: true
+        explanation: Right. The most stable module now changes whenever tagging does. Code that sits above both can combine their answers without either knowing the other.
+      - text: Deleting a scope that still has tags should be allowed
+        explanation: That changes the requirement, not the design. Refusing is a sensible rule; the problem is where the check lives.
+      - text: "`catalog` should also be allowed to call `tagging`"
+        explanation: That adds a second loop (`tagging` already calls `catalog`). The fix goes the other way.
+  - prompt: |
+      **Design 3.** When a push says an item was deleted, `sync` runs:
+
+      ```sql
+      UPDATE items SET status = 'missing', missing_since = now()
+      WHERE source_id = $1 AND item_id = $2;
+
+      DELETE FROM taggings
+      WHERE source_id = $1 AND item_id = $2;
+      ```
+
+      What’s wrong?
+    options:
+      - text: Nothing, as long as both statements run in one transaction
+        explanation: A transaction makes the two changes happen together, but it doesn’t make them right. The wrong module is writing, and the second statement breaks a promise.
+      - text: "`sync` writes straight into tables that `catalog` and `tagging` own, and the second statement breaks Shelf’s rule that a delete never removes tags directly"
+        correct: true
+        explanation: Right. `sync` should call `catalog.markMissing` and stop there. The tags stay for 30 days in case the item comes back; only trashing removes them.
+      - text: The first statement should delete the item’s row instead of changing its status
+        explanation: That would lose the item and its history at once. Shelf deletes softly so a mistaken delete costs nothing.
+      - text: "`sync` should send the change to the `api` module’s HTTP endpoint instead"
+        explanation: Modules never call `api`; it sits at the top. That would point a dependency the wrong way.

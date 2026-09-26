@@ -1,0 +1,215 @@
+---
+unit: 6
+order: 9
+title: "Step 8: write it down so a machine can check it"
+summary: The same Shelf endpoint written three ways, as OpenAPI, JSON Schema and Zod, and what each is best at. Then build a contract yourself and watch all three appear.
+minutes: 10
+terms: [schema, openapi, json-schema, zod, contract-test]
+---
+
+## In one sentence
+
+Write the contract in a format a program can read, so tools can check real requests and responses against it instead of trusting everyone to reread a document.
+
+## Example: the list endpoint, three ways
+
+Steps 1 to 7 gave Shelf’s list endpoint a contract in words and tables. Parts of it are exact facts about data: “`limit` is a whole number from 1 to 500”, “`title` is at most 300 characters”, “`nextCursor` is text or `null`”. A person can check a page against those sentences. A program can’t, until the same facts are written in a format it understands.
+
+Here is the same endpoint in three such formats, as the contract builder at the end of this lesson generates them. They are trimmed to fit: descriptions and a few repeated parts are left out. The path is a stand-in. Each app serves the endpoint at whatever list URL it registered, and the example uses `/shelf/items`.
+
+### OpenAPI
+
+```yaml
+openapi: 3.1.0
+info:
+  title: Shelf source list API
+  version: 1.0.0
+paths:
+  /shelf/items:
+    get:
+      operationId: listItems
+      summary: List every item the app wants Shelf to know about
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 500
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+      responses:
+        "200":
+          description: One page of items.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          maxLength: 200
+                        title:
+                          type: string
+                          maxLength: 300
+                        # url and scope: optional strings, left out here
+                        updatedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - title
+                        - updatedAt
+                    maxItems: 500
+                  nextCursor:
+                    type:
+                      - string
+                      - "null"
+                    maxLength: 500
+                required:
+                  - items
+                  - nextCursor
+        "400":
+          description: "Bad request. `invalid_cursor`: The cursor is unknown or more than an hour old. Shelf starts the listing again from the beginning."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        # "401" and "503" look the same
+      security:
+        - callerKey: []
+      x-guarantees:
+        timeout: Each page must arrive within 10 seconds. Shelf retries a slow or failed page up to 3 times, waiting 2, 4 and 8 seconds.
+        # and the other five guarantees
+components:
+  # schemas: Error, the error body, left out here
+  securitySchemes:
+    callerKey:
+      type: http
+      scheme: bearer
+```
+
+<Term id="openapi">OpenAPI</Term> describes the whole endpoint: the method and path, the parameters, every response including the errors, and how callers prove who they are (`security`). The behavioural guarantees travel as text, in the description and in an `x-guarantees` extension. Tools won’t act on that prose, but people reading the file will see it.
+
+### JSON Schema
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "List every item the app wants Shelf to know about: response body",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "maxLength": 200 },
+          "title": { "type": "string", "maxLength": 300 },
+          "url": { "type": "string", "maxLength": 2000 },
+          "scope": { "type": "string", "maxLength": 200 },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "title", "updatedAt"]
+      },
+      "maxItems": 500
+    },
+    "nextCursor": { "type": ["string", "null"], "maxLength": 500 }
+  },
+  "required": ["items", "nextCursor"]
+}
+```
+
+<Term id="json-schema">JSON Schema</Term> describes only the shape of one JSON document: here, the body of a `200` response. It knows nothing about paths, methods or status codes. In exchange, almost every language has a validator for it, so the recipe site’s team can check their pages in their own test suite, whatever their site is written in. (OpenAPI 3.1 uses JSON Schema for its bodies. The `schema` block under `"200"` above is the same thing, written in YAML.)
+
+Look at what is missing: `"additionalProperties": false`. The response stays open, so an app can send an extra field without breaking Shelf, as you saw in [Step 7](/learn/contracts/changing-a-contract-safely/).
+
+### Zod
+
+```ts
+import { z } from 'zod';
+
+// GET /shelf/items: List every item the app wants Shelf to know about
+
+/** Path, query and header parameters. These arrive as text, so numbers are coerced. */
+export const ListItemsParams = z.object({
+  cursor: z.string().max(500).optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+});
+
+/** Response body (200). Extra fields are ignored, so the provider can add more later. */
+export const ListItemsResponse = z.object({
+  items: z.array(z.object({
+      id: z.string().max(200),
+      title: z.string().max(300),
+      url: z.string().max(2000).optional(),
+      scope: z.string().max(200).optional(),
+      updatedAt: z.iso.datetime(),
+    })).max(500),
+  nextCursor: z.string().max(500).nullable(),
+});
+
+// ListItemsError: the error body, as in the other two
+
+export type ListItemsResponse = z.infer<typeof ListItemsResponse>;
+```
+
+<Term id="zod">Zod</Term> is a TypeScript library. One definition does two jobs: it checks data while the program runs, and it gives the compiler a type, so the code that reads a page knows `title` is a string. In a TypeScript codebase, Shelf’s `sync` module could check every page it fetches:
+
+```ts
+const result = ListItemsResponse.safeParse(await res.json());
+if (!result.success) {
+  // A page that does not match the contract counts as a failed page.
+}
+```
+
+## The general idea
+
+A <Term id="schema">schema</Term> is a precise description of the shape of some data. Written in a format a machine can read, your contract becomes more than a document. It becomes something you can run: a validator, a test, a generated client, or a mock server for an app team to build against.
+
+The three formats overlap, but each has a job it does best.
+
+| Format | Describes | Best at | Not for |
+|---|---|---|---|
+| OpenAPI | A whole HTTP API | Handing an API to another team: readable docs, mock servers, client code, tests | Anything that isn’t request and response over HTTP |
+| JSON Schema | The shape of one JSON document | Checking data in any language: bodies, config files, events, stored documents | Paths, methods, status codes and keys |
+| Zod | Shapes, as TypeScript code | Checking data where it enters a TypeScript program, with types for free | Sharing with teams who don’t write TypeScript |
+
+**None of them checks a guarantee.** A schema can say that `nextCursor` is text or `null`. It can’t say “a listing that reaches `null` contains every item”, or “each page arrives within 10 s”. Those promises stay in words, and <Term id="contract-test">contract tests</Term> check them: you’ll meet those in [Keeping contracts honest](/learn/the-toolbox/keeping-contracts-honest/). The toolbox unit also compares these formats with others, such as AsyncAPI for events, in [Contract tools](/learn/the-toolbox/contract-tools/).
+
+<Callout type="tradeoff" title="Pick one source">
+Writing all three by hand gives you three copies that drift apart. Choose one as the source and generate the others. OpenAPI is a common choice, because it is what other teams read, and code in any language can be generated from it. A team that works only in TypeScript may prefer to write Zod and generate OpenAPI from that. Either works. Two sources kept by hand don’t.
+</Callout>
+
+## Common mistakes
+
+- **Stopping at the shapes.** A schema with no errors, limits, guarantees or access rules is half a contract. OpenAPI has room for all of them, so use it.
+- **Hand-editing a generated copy.** The next time anyone regenerates, the edit vanishes, or worse, someone stops regenerating. Change the source instead.
+- **Writing it down and never checking.** A schema that no test runs against goes stale the first time someone changes the code in a hurry.
+
+## Try it
+
+The contract builder starts on the list endpoint from this lesson (“Shelf pull: an app lists its items”). Fill in or change the form on one side and watch the OpenAPI, JSON Schema and Zod tabs change together. Things to try:
+
+1. In section 3, **Output**, rename the item field `title` to `name` and watch all three tabs change at once. It was one edit for you, and it would be a breaking change for every app.
+2. In section 5, **Guarantees**, clear **Pagination** and read the warning that appears.
+3. Under “Start from”, choose “Shelf push: an app sends changes”. In the JSON Schema tab, find `"additionalProperties": false` on the request body: requests are strict.
+4. Try “Shelf: tag an item”, or “Start from scratch” and describe an endpoint of your own.
+
+Your work is saved in this browser. Choosing an example replaces what’s in the form.
+
+<ContractBuilder />
+
+Then check which format suits which job:
+
+<Quiz id="u6-b-which-format" />

@@ -1,0 +1,42 @@
+id: u9-newsletter-key
+type: sort
+title: Keys for the newsletter
+intro: |
+  A new app joins Shelf: a weekly newsletter. Every Friday it emails subscribers the recipes tagged `vegetarian` (a tag in `/food`) and the quizzes tagged `exam-prep` (a tag in `/learning`). It has no items of its own and never changes anything in Shelf.
+
+  Each key has exactly one scope. For each decision, choose whether to do it.
+buckets:
+  - id: do
+    label: Do it
+    hint: The newsletter needs it, or it keeps the damage small.
+  - id: dont
+    label: Don’t
+    hint: More access than the job needs, or a bigger blast radius.
+items:
+  - text: Give it a key with `tags:read` in `/food`
+    bucket: do
+    reason: It needs to look up recipes tagged `vegetarian`, which lives in `/food`. Reading is all it does.
+  - text: Give it one key with `tags:read` in `/`, so it only has one key to look after
+    bucket: dont
+    reason: That key would also reach `/photos`, and every scope added later. Two narrow keys do the same job, and a leak of either shows much less.
+  - text: Add `tags:apply` in `/food`, in case it wants to tag recipes one day
+    bucket: dont
+    reason: “One day” isn’t a job. It never changes anything, so it gets no privilege that changes anything. Add it when a real need turns up.
+  - text: Give it a second key, with `tags:read` in `/learning`
+    bucket: do
+    reason: A key has one scope, and `exam-prep` lives in `/learning`. A second read-only key covers it without reaching `/food`, `/photos` or anything else.
+  - text: Let it borrow the recipe site’s key, since both read recipes
+    bucket: dont
+    reason: It would get `items:push` and `tags:apply` it doesn’t need, and a shared key can’t be revoked without breaking the recipe site too.
+  - text: Give it `items:push`
+    bucket: dont
+    reason: It has no items and isn’t a source. There’s nothing for it to push.
+  - text: Use `/learning/maths` instead of `/learning` for its second key, to keep it narrow
+    bucket: dont
+    reason: Too narrow. `exam-prep` is defined in `/learning`, above that scope, so this key couldn’t look it up at all. Narrow is good; too narrow to do the job isn’t.
+  - text: Show each key once when it’s issued, and keep only its hash in Shelf
+    bucket: do
+    reason: If Shelf’s database or a backup is ever copied, the thief gets fingerprints, not working keys.
+  - text: Give it `tags:manage` in `/learning`, so it can tidy tag names it doesn’t like
+    bucket: dont
+    reason: Renaming and deleting tags is the curators’ job. With this, a bug in the newsletter could delete `exam-prep` and every tagging it has.

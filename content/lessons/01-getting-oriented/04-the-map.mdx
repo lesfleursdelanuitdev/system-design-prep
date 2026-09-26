@@ -1,0 +1,64 @@
+---
+unit: 1
+order: 4
+title: The map
+summary: The eleven parts of a design, in the order to work through them, and what each one asks about Shelf.
+minutes: 8
+terms: [system-design, requirement, contract, failure-mode]
+---
+
+## In one sentence
+
+Every design has the same eleven parts, and working through them in order, from requirements to evolution, means each decision rests on the ones before it.
+
+## Example
+
+Here is the whole of Shelf’s design in miniature: one question and one short answer for each part. Don’t worry about the details yet. Each row gets its own unit.
+
+| # | Part | The question | Shelf, in one line |
+|---|---|---|---|
+| 1 | Requirements | What must it do, and how well? | Tag items and look them up; 95% of lookups within 200 ms. |
+| 2 | Domain model | What are the things, and how do they relate? | Sources own items; tags live in scopes; tags go on items. |
+| 3 | Boundaries | Which part owns what? | A `catalog` module owns items; a `tagging` module owns tags. |
+| 4 | Data model | How is it stored? | An `items` table keyed by app and item id; a `taggings` table linking tags to items. |
+| 5 | Contracts | What does each part promise the others? | Apps send changes in batches of up to 500; each app serves a complete list. |
+| 6 | Flows | What happens, step by step? | App pushes → Shelf checks the key → applies the batch in one go → answers. |
+| 7 | State | What stages does each thing go through? | Present → missing → trashed → gone. |
+| 8 | Failure | What if a step fails, is slow, or runs twice? | A failed nightly pull marks nothing missing. |
+| 9 | Security | Who may do what, where? | A key only works in its own scope. |
+| 10 | Operations | How will we know it’s healthy? | Alert if a nightly pull fails. |
+| 11 | Evolution | How will it change safely? | Add fields freely; never remove or repurpose one. |
+
+Notice how each answer leans on earlier ones. You can’t say “a key only works in its own scope” (security) until scopes exist (domain model). You can’t say “a failed pull marks nothing missing” (failure) until you know there is a pull (flows) and a *missing* state (state).
+
+## The general idea
+
+These are the eleven parts of a <Term id="system-design">design</Term>. Pick one to jump to where the course covers it:
+
+<DesignMap />
+
+**Why this order.** Each part needs the ones before it:
+
+- <Term id="requirement">Requirements</Term> come first because everything else serves them.
+- The **domain model** names the things; **boundaries** decide which part owns each thing; the **data model** stores them.
+- **Contracts** are the promises across those boundaries. You can only write them once you know who owns what.
+- **Flows** and **state** describe what happens over time, using the contracts.
+- **Failure**, **security**, **operations** and **evolution** each walk back over everything before them and ask a harder question: what if it goes wrong, who is allowed, how will we know, and how will it change?
+
+**It’s a first pass, not a one-way street.** Listing <Term id="failure-mode">failure modes</Term> often changes a <Term id="contract">contract</Term>. (Shelf’s rule that a failed nightly pull marks nothing missing came from exactly that.) When a later part changes an earlier one, go back and update it. The order is for your first pass and for checking a design, not a rule that you may never look back.
+
+**It’s also a checklist.** A design that skips a part has a hole in it. Most painful surprises in production come from the last four parts, which are also the ones most often skipped.
+
+<Callout type="tip" title="You’ll see this map again">
+From Unit 2 on, a strip at the top of every lesson shows these eleven parts with the current one highlighted, so you always know where you are.
+</Callout>
+
+## Common mistakes
+
+- **Starting in the middle.** Drawing tables before you know the requirements is the classic one. The tables end up shaped by the first screen someone imagined, not by what the system must do.
+- **Treating the order as one-way.** The first pass goes top to bottom. After that, every part can send you back to an earlier one.
+- **Skipping the last four.** Failure, security, operations and evolution feel like extras. They are where systems actually hurt people.
+
+## Try it
+
+<Quiz id="u1-which-part" />

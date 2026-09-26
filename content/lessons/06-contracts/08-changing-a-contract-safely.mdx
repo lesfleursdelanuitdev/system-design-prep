@@ -1,0 +1,110 @@
+---
+unit: 6
+order: 8
+title: "Step 7: changing a contract safely"
+summary: Add freely; never remove or repurpose; version when you must. Two changes to Shelf’s list endpoint show the difference, and why responses stay open while requests stay strict.
+minutes: 9
+terms: [breaking-change, backward-compatible, versioning, deprecation, tolerant-reader]
+---
+
+## In one sentence
+
+Once others depend on a contract, add to it freely but never remove or repurpose anything; when a break is unavoidable, publish a new version beside the old one.
+
+## Example: two changes to the list endpoint
+
+Every night Shelf reads each app’s list endpoint. One item on a page looks like this:
+
+```json
+{ "id": "r-1042", "title": "Lentil soup", "url": "https://recipes.example/r-1042", "updatedAt": "2026-05-01T10:00:00Z" }
+```
+
+Shelf wrote this contract, and three app teams built it. Now Shelf wants two changes. Watch who has to do what.
+
+### Change 1: add a thumbnail
+
+The admin screens would be easier to scan with a small picture next to each item. Shelf adds one field to the contract:
+
+| Field | Type | Required? |
+|---|---|---|
+| `thumbnailUrl` | text, at most 2,000 characters | No |
+
+Now walk through each app:
+
+- **An app that does nothing** still sends valid pages. The field is optional, so leaving it out is allowed. Shelf shows no picture.
+- **An app that adds it** gets pictures as soon as Shelf reads the field.
+- **An app that adds it early,** before Shelf’s code reads it, is fine too. Shelf ignores fields it doesn’t know.
+
+Nobody had to change anything on any particular day. Each team moves when it likes.
+
+### Change 2: rename `title` to `name`
+
+Someone points out that photos don’t really have titles. Wouldn’t `name` be tidier? Walk through it again:
+
+- Every app sends `title` today. The new Shelf looks for `name` and finds none. Either it rejects every page, so the nightly pull fails for every app, or it reads blank names, and 60,000 items lose their titles in lookups.
+- To avoid that, all three app teams must release new code on the same day Shelf does. One team on holiday and the whole change stalls.
+
+A rename is a removal plus an addition, and the removal is what breaks things.
+
+<Compare>
+<Side title="Adding an optional thumbnailUrl" tone="good">
+Old apps keep working. Each app opts in when it’s ready. Nobody has to coordinate.
+</Side>
+<Side title="Renaming title to name" tone="bad">
+Shelf and every app must change at the same moment, or the nightly pull breaks for everyone.
+</Side>
+</Compare>
+
+The better choice is to keep `title`. A slightly odd name costs nothing. A rename costs three teams a coordinated release, and more teams every year.
+
+## The general idea
+
+Three rules keep a contract safe to change.
+
+**1. Add freely.** A new optional field, a new optional parameter, a new endpoint: existing callers don’t notice any of them. A change like that is <Term id="backward-compatible">backward compatible</Term>. Loosening a limit on what you accept (taking 1,000 changes where you took 500) is safe too, because everything that worked still works.
+
+**2. Never remove or repurpose.** These are <Term id="breaking-change">breaking changes</Term>, because existing, correct callers start to fail:
+
+- removing or renaming a field
+- making an optional input required
+- tightening a limit (200 changes where you took 500)
+- changing a default (lookups including missing items unless told not to)
+- changing what a value means
+
+Repurposing is the sneaky one, because nothing fails loudly. If Shelf decided that `updatedAt` should now mean “when the item was published”, every page would still be valid, and ordering would quietly go wrong. It’s the same reason item ids are never reused: a name that once meant one thing must keep meaning it.
+
+**3. Version when you must.** Sometimes a break is worth it. Then leave the old contract alone and publish a new one beside it. That’s why Shelf’s paths start with `/v1`: <Term id="versioning">versioning</Term> lets two versions live side by side.
+
+Suppose Shelf decided that a push should no longer be all-or-nothing: good changes applied, bad ones reported. The request looks the same, but it means something different, so it can’t sneak into `/v1`. It becomes `POST /v2/sources/{sourceId}/changes`, and then:
+
+1. `/v1` keeps working exactly as before.
+2. Shelf announces the <Term id="deprecation">deprecation</Term> of `/v1`, with a date well ahead (6 months, say), and puts that date in a `Sunset` header on every `/v1` response.
+3. The admin watches which keys still call `/v1`, and talks to those teams.
+4. `/v1` is switched off only once nobody has called it for a while.
+
+### Open responses, strict requests
+
+A contract has two directions, and they follow opposite rules.
+
+**Responses stay open.** Whoever reads a response must ignore fields it doesn’t know. A consumer that does this is a <Term id="tolerant-reader">tolerant reader</Term>, and it’s what makes rule 1 work. In change 1, Shelf could shrug off an early `thumbnailUrl` only because it doesn’t reject unknown fields. So the contract says it outright: “consumers must ignore fields they don’t recognise”. In a schema, it means not forbidding extra properties in a response.
+
+**Requests are strict.** Shelf rejects a push that contains a field it doesn’t recognise, with `400 invalid_request`. There are two reasons:
+
+- **A typo is caught at once.** If the quiz app sent `titel`, a lenient Shelf would drop it silently, and the quiz’s title would never update. A strict Shelf answers straight away, and `details` points at the change with the typo.
+- **Names stay free for later.** If Shelf quietly accepted unknown fields, some app might already be sending a field called `tags` in its changes, with something odd in it. The day Shelf gave `tags` a meaning, the odd values would start to count. With strict requests, nobody can be sending a field Shelf doesn’t know.
+
+<Callout type="tradeoff" title="Is a new value a breaking change?">
+Each push result has a `status` of `present` or `missing`. Suppose Shelf wanted a third value. The shape doesn’t change, but an app whose code handles “present or missing” and nothing else may fall over. You can promise up front that new values may appear and say what callers should do with one they don’t know, which keeps you free to add them. Or you can treat every new value as a breaking change, which is safer for callers and slower for you. Either way, decide it before the first app is built.
+</Callout>
+
+[Unit 10](/learn/changing-over-time/migrations-without-breaking-users/) applies the same thinking to stored data: change the model while existing users see no difference.
+
+## Common mistakes
+
+- **Renaming for tidiness.** A nicer name is never worth a coordinated release across teams. Keep the old name and explain it in the field’s description.
+- **Reading responses strictly.** A consumer that rejects unknown fields turns every harmless addition into an outage. Be strict with requests you receive, and tolerant with responses you read.
+- **Versioning too often, or switching off too soon.** A new version for every small change leaves you running five of them. And removing `/v1` on the announced date without checking who still calls it breaks the one team that missed the email.
+
+## Try it
+
+<Sort id="u6-b-safe-or-breaking" />

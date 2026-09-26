@@ -1,0 +1,102 @@
+---
+unit: 6
+order: 5
+title: "Step 4: errors are part of the contract"
+summary: Every way an operation can fail, and what the caller sees each time. A status code, a stable error code, a message for people, details for code, and what to do next.
+minutes: 8
+terms: [error-code, status-code, retry, backoff]
+---
+
+## In one sentence
+
+A contract must list every way each operation can fail and, for each one, what the caller sees and what it should do next, because the caller’s code has to handle failure as surely as it handles success.
+
+## Example: a tagging that doesn’t fit
+
+The quiz app tries to put `algebra` on `q-208`. But `algebra` is defined in `/learning/maths`, and `q-208` is a history quiz in `/learning`. The tag doesn’t fit, and Shelf says so:
+
+```http
+422 Unprocessable Content
+
+{
+  "error": {
+    "code": "tag_out_of_scope",
+    "message": "Tag 'algebra' (/learning/maths) can't go on items in /learning.",
+    "details": { "tagScope": "/learning/maths", "itemScope": "/learning" }
+  }
+}
+```
+
+That answer has four parts, each for a different reader:
+
+| Part | Here | Who reads it | May it change? |
+|---|---|---|---|
+| Status code | `422` | general-purpose code: HTTP libraries, proxies, dashboards | no |
+| Error code | `tag_out_of_scope` | the quiz app’s code, which branches on it | no, never |
+| Message | “Tag ‘algebra’ can’t go on…” | a person reading a log | yes, any time |
+| Details | the two scopes | the quiz app’s code, to show something helpful | only as the contract allows |
+
+### Every way it can fail
+
+Here is the full list of errors for tagging an item, with the column people forget: what the caller should do next.
+
+| What went wrong | Status | Code | What the caller should do |
+|---|---|---|---|
+| No key, or an unknown or revoked one | 401 | `unauthenticated` | Stop. Fix the key; retrying won’t help. |
+| The key lacks `tags:apply`, or the item or tag is outside its scope | 403 | `forbidden` | Stop. Ask the admin for access. |
+| Shelf has never seen the item, or it is gone | 404 | `item_not_found` | Check the ids. If the item is new, push it first. |
+| No tag has this id | 404 | `tag_not_found` | Refresh the list of tags; this one may have been deleted. |
+| The item is missing or trashed | 409 | `item_missing` | Don’t retry now. It can be tagged once its app pushes or lists it again. |
+| The tag’s scope doesn’t contain the item’s scope | 422 | `tag_out_of_scope` | Don’t retry. Offer a tag that fits. |
+| Over 600 requests a minute from this key | 429 | `rate_limited` | Wait the seconds given in `Retry-After`, then retry. |
+
+Most of these rows are a precondition from the last step, turned inside out. “The tag’s scope contains the item’s scope” becomes `tag_out_of_scope` when it doesn’t.
+
+The last column matters most. A caller that knows what to do next can recover on its own. A caller that only knows “it failed” either gives up or retries blindly, and retrying a `422` a thousand times helps nobody.
+
+### What state is left behind
+
+An error must also say what happened to the data. Sending changes is all-or-nothing, and its contract says so for each error. If one change in 200 breaks a rule, Shelf answers `400 invalid_request`, with `details.index` pointing at that change, and **nothing is applied**. The recipe site fixes one change and sends the whole batch again, knowing nothing was half-done.
+
+<Callout type="story" title="The message that changed">
+The recipe site lets its own editors tag recipes. Its first version spotted scope errors with `error.message.includes("out of scope")`. One day Shelf improved its messages to name both scopes, and the words “out of scope” disappeared. Nothing crashed. The recipe site quietly stopped showing the “this tag doesn’t fit here” hint, and nobody noticed for weeks. Checking `error.code` would have kept working, because codes are part of the contract and messages aren’t.
+</Callout>
+
+## The general idea
+
+An error is an answer too. A contract lists every error each operation can return, and gives each one four things:
+
+1. **A <Term id="status-code">status code</Term>** for the broad family, so general-purpose tools understand it.
+2. **An <Term id="error-code">error code</Term>**: a short, stable name such as `tag_out_of_scope`. Callers branch on it, and it never changes meaning.
+3. **A message** for people. Callers never parse it, and the provider may reword it at any time.
+4. **Details** in a fixed shape, for code: which change in a batch, which scopes clashed.
+
+Shelf uses one shape for every error, `{ "error": { "code", "message", "details" } }`, so an app writes its error handling once.
+
+**4xx or 5xx: whose fault, and is it worth trying again?**
+
+- **4xx means the caller got something wrong:** the request, the key or the moment. Sending the same request again straight away gets the same answer. The exception is `429 rate_limited`: wait, then <Term id="retry">retry</Term>.
+- **5xx means the provider got something wrong.** The request may be fine. Retry later with <Term id="backoff">backoff</Term>, waiting longer each time, and honour `Retry-After` when it’s sent. When Shelf can’t take changes it answers `503 unavailable`; the app retries, and the nightly pull repairs anything that never got through. (Retrying is only safe if the operation can run twice. That’s a [behavioural guarantee](/learn/contracts/behavioural-guarantees/).)
+
+**When the consumer writes the contract,** it decides which errors the provider may return, and promises what it will do about each. In Shelf’s list contract:
+
+- `400 invalid_cursor` (unknown, or over an hour old): Shelf starts the listing again from the beginning.
+- `401 unauthenticated`: Shelf stops and alerts the admin.
+- `503 unavailable`: Shelf retries the page three times, then gives up for tonight and marks **nothing** missing.
+
+Any other failure, such as a `500` or a page slower than 10 s, Shelf handles like a `503`. The contract says so, so no app has to guess.
+
+<Callout type="tradeoff" title="How many error codes?">
+Too few, and callers can’t act: if every failure is `400 bad_request`, the recipe site can’t tell “shorten this title” from “this tag doesn’t fit”. Too many, and every caller writes a long list of cases, most of them handled the same way. A good rule: add a new code only when the caller should **do something different**. Let details carry the rest.
+</Callout>
+
+## Common mistakes
+
+- **Documenting only success.** The first time a caller meets `item_missing` shouldn’t be in production.
+- **A success status for a failure.** `200 OK` with `"ok": false` in the body hides the failure from every library, proxy and dashboard that trusts the status code.
+- **Blaming the wrong side.** A database outage answered with `400` tells the app to fix a request that was fine. A bad title answered with `500` invites endless retries.
+- **Leaking the inside.** A stack trace or a database error in the message tells callers about your tables, and tempts them to depend on it.
+
+## Try it
+
+<Quiz id="u6-a-spot-the-missing-error" />

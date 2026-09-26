@@ -1,0 +1,83 @@
+---
+unit: 9
+order: 2
+title: Designing for least access
+summary: Start every key with nothing, give it only what its job needs, and plan for the day it leaks, so that a lost key can do as little harm as possible.
+minutes: 8
+terms: [least-privilege, default-deny, blast-radius, hashing, api-key]
+---
+
+## In one sentence
+
+Start every key with nothing, add only what its job needs, and assume that one day it will leak, so the damage it can do stays small.
+
+## Example: the recipe site’s key
+
+The recipe site is joining Shelf, and the admin is about to issue its key. What should the key allow? Start from the recipe site’s jobs, not from what would be convenient.
+
+| The recipe site needs to… | So its key gets… |
+|---|---|
+| tell Shelf when recipes change | `items:push`, for the source `recipes` only |
+| show its visitors the recipes tagged “vegetarian” | `tags:read` in `/food` |
+| let its own editors tag recipes from its screens | `tags:apply` in `/food` |
+
+That’s the whole list. What it doesn’t get matters as much:
+
+- **Not `tags:manage`.** Creating, renaming and deleting tags is the curators’ job. A bug in the recipe site should never be able to delete `vegetarian`.
+- **Not `/`, and not `/photos`.** The recipe site has no business with quizzes or photos. With its scope set to `/food`, it can’t touch them.
+- **Not `admin`.** Registering sources and issuing keys belongs to the admin alone.
+
+### What if it leaks?
+
+Suppose a developer at the recipe site pastes the key into a public code repository by mistake. Now compare two keys the recipe site might have been given.
+
+<Compare>
+<Side title="A convenient key: admin in /" tone="bad">
+Whoever finds it can register fake sources, issue themselves new keys, revoke the real apps’ keys, and delete `favourite`, taking it off every recipe, quiz and photo at once. To be safe, the admin must assume everything in Shelf has been touched.
+</Side>
+<Side title="The recipe site’s key" tone="good">
+Whoever finds it can push bogus changes for recipes, and put `/food` tags on recipes or take them off. That’s real harm, but a pushed delete only marks a recipe missing, with its tags kept for 30 days. Quizzes, photos, the tags themselves and every other key are out of reach.
+</Side>
+</Compare>
+
+The difference between those two boxes is the whole point of this lesson.
+
+### Planning for the leak
+
+Least access limits what a leaked key can do. Three more decisions limit how long it can do it, and how much a thief can get in the first place.
+
+**Keys are stored hashed.** When the admin issues a key, Shelf shows it once and keeps only a scrambled fingerprint of it (`secret_hash`). On each request, Shelf scrambles the key it receives the same way and compares the two. If someone copies Shelf’s database, or a backup goes astray, they get fingerprints, not working keys.
+
+**Revoking is one step.** The admin sets `revoked_at` on the key. From the next request on, it gets `401 unauthenticated`. To replace a key without an outage, the admin issues the new one first, the recipe site switches to it, and then the old one is revoked.
+
+**Each key leaves a trail.** Shelf logs the id of the key behind every request (never the key itself), and every tagging records who made it. After a leak, the admin can see exactly what the key did, and put it right.
+
+## The general idea
+
+<Term id="least-privilege">Least privilege</Term> means giving each person or program only the access its job needs, and no more. Two habits make it work.
+
+**Default deny.** Under <Term id="default-deny">default deny</Term>, nothing is allowed unless a rule says so. A new key starts with no privileges. A new endpoint is closed to everyone until someone decides which privilege it needs. If a rule is forgotten, somebody gets a `403` and complains, which is annoying but visible. The other way round, a forgotten rule is a hole nobody notices.
+
+**Grant from the job.** List what the caller must do. Turn each job into a privilege and a scope. Then stop. “It might need to one day” isn’t a job.
+
+The measure of how well you’ve done is the <Term id="blast-radius">blast radius</Term>: how much harm one leaked key, or one bug, can do. Shelf keeps it small in three ways:
+
+- **fewer privileges:** an app’s key can’t manage tags;
+- **a smaller scope:** `/food`, not `/`;
+- **one key per caller:** each app, and each curator, has its own <Term id="api-key">key</Term>, and a push key is tied to one source. Revoking one key breaks nobody else.
+
+And it plans for the leak anyway, because keys do leak: stored with <Term id="hashing">hashing</Term>, revoked in one step, traced in the logs.
+
+<Callout type="tradeoff" title="Least access has a price">
+Every narrow key is one more key to issue, store and replace. When the recipe site wants a new feature, it may have to ask the admin for a new privilege, and wait. Remember the maths curator from the last lesson, who wanted to use `exam-prep`: moving her key up to `/learning` is quicker for everyone, and gives her the power to delete every tag in `/learning`. Keeping her at `/learning/maths` and asking the `/learning` curator to apply `exam-prep` costs time every exam season. Neither answer is free. Shelf keeps five privileges and four roles: few enough to hold in your head, narrow enough that no app ever needs `admin`.
+</Callout>
+
+## Common mistakes
+
+- **One powerful key “for now”.** Temporary admin keys outlive everyone’s memory of them. Start narrow; widening a key later is one change.
+- **Sharing a key between callers.** You can’t revoke it without breaking all of them, and the logs can’t tell you which one did what.
+- **Keeping keys where they can be read.** In Shelf’s database, in an app’s code, in a log line. A key in a log file is a leaked key.
+
+## Try it
+
+<Sort id="u9-newsletter-key" />

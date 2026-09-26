@@ -1,0 +1,42 @@
+id: u6-a-in-the-contract
+type: sort
+title: In the contract, or an inside detail?
+intro: Ten facts about Shelf. Which ones are promises the apps may rely on, and which are details Shelf can change without telling anyone?
+buckets:
+  - id: contract
+    label: Part of the contract
+    hint: Callers may rely on it. Changing it could break them.
+  - id: inside
+    label: An inside detail
+    hint: Shelf can change it freely. Callers mustn’t depend on it.
+items:
+  - text: A failed tagging because the tag doesn’t fit the item’s scope comes back with the code `tag_out_of_scope`
+    bucket: contract
+    reason: Apps write code that checks this code. Rename it and their error handling quietly stops working.
+  - text: Taggings are stored in a Postgres table called `taggings`
+    bucket: inside
+    reason: No app ever sees the table. Shelf could rename it, split it or move to another database, and the contract would still hold.
+  - text: One push request may hold at most 500 changes
+    bucket: contract
+    reason: Apps split their batches around this number. Lower it and their requests start failing with `too_many_changes`.
+  - text: Tag ids start with `tag_`
+    bucket: inside
+    reason: The contract says a tag id is opaque text of at most 40 characters. The prefix is how Shelf happens to make them today, and an app that checks for it is relying on a promise nobody made.
+  - text: A deleted item keeps its tags for 30 days in case it comes back
+    bucket: contract
+    reason: Apps rely on it when they unpublish something by mistake. It’s one of the most important promises Shelf makes.
+  - text: The exact wording of an error message
+    bucket: inside
+    reason: The contract promises a message for people, not its words. Callers branch on the error code, so Shelf can reword messages any time.
+  - text: Tagging an item that already has the tag succeeds, with `created` set to false
+    bucket: contract
+    reason: This is what makes tagging safe to retry. Apps rely on getting a success, not an error, the second time.
+  - text: The job that moves items from missing to trashed runs every hour
+    bucket: inside
+    reason: The promise is “30 days”. How Shelf keeps it, with an hourly job or any other way, is its own business.
+  - text: On the last page of a nightly listing, `nextCursor` is `null`
+    bucket: contract
+    reason: This one is a promise the apps make to Shelf. Shelf relies on it to know the listing is complete, so contracts run both ways.
+  - text: The `catalog` module owns each item’s status
+    bucket: inside
+    reason: Module names and who owns what inside Shelf are internal. Apps only see the status Shelf reports back, such as in the results of a push.

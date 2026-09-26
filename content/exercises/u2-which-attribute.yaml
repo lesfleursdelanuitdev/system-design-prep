@@ -1,0 +1,59 @@
+id: u2-which-attribute
+type: quiz
+title: Which quality is this?
+intro: Each line is one of Shelf’s requirements. Which quality attribute is it about?
+questions:
+  - prompt: “If the server is lost, Shelf must be answering lookups again within 2 hours.”
+    options:
+      - text: Availability
+        explanation: Close. Availability is the share of a whole month that Shelf is up. This is about one disaster and how long Shelf takes to come back from it.
+      - text: Recovery
+        correct: true
+        explanation: Right. How long it takes to come back after a disaster is the recovery time objective (RTO). Its partner, the RPO, says how much data may be lost.
+      - text: Durability
+        explanation: Durability is about not losing what was saved. This requirement is about time to come back, not about data.
+  - prompt: “After the quiz app pushes a renamed quiz, lookups show the new title within 5 s.”
+    options:
+      - text: Latency
+        explanation: Latency is how long one lookup takes. A lookup could answer in 50 ms and still show last week’s title.
+      - text: Throughput
+        explanation: Throughput is how much work Shelf gets through each second. This is about how up to date the answer is.
+      - text: Freshness
+        correct: true
+        explanation: Right. It’s about how old the data in the answer is, not how quickly the answer arrives.
+  - prompt: “Adding a fourth app must not need any change to Shelf’s code.”
+    options:
+      - text: Scalability
+        explanation: Tempting, because a fourth app is “more”. But scalability is about coping with more load or data. This is about changing what Shelf connects to without touching its code.
+      - text: Maintainability
+        correct: true
+        explanation: Right. How safely and cheaply Shelf can be changed, including plugging in new apps, is maintainability.
+      - text: Operability
+        explanation: Operability is about running Shelf day to day and spotting problems. Registering an app is a change, not a problem to spot.
+  - prompt: “Once Shelf has said ‘OK’ to a new tag, the tag survives a crash one second later.”
+    options:
+      - text: Availability
+        explanation: Shelf could be down for an hour after the crash and still meet this. It’s about what’s saved, not whether Shelf is answering.
+      - text: Durability
+        correct: true
+        explanation: Right. Once Shelf has said a change is saved, it stays saved, even if the machine fails straight afterwards.
+      - text: Recovery
+        explanation: Recovery covers losing the whole server, where Shelf accepts losing up to 15 minutes of changes. A crash that leaves the disk intact must lose nothing, and that’s durability.
+  - prompt: “Shelf keeps answering 20 lookups a second while it applies a push of 500 changes.”
+    options:
+      - text: Latency
+        explanation: Latency is how long each lookup takes. This is about how much work Shelf gets through each second, with a big push going on at the same time.
+      - text: Throughput
+        correct: true
+        explanation: Right. It says how much work Shelf must sustain per second, even while it’s busy with something else.
+      - text: Scalability
+        explanation: Scalability is about growing beyond today’s numbers and what that takes. 20 lookups a second is today’s design load.
+  - prompt: “The admin can see, on one screen, when each source last had a good nightly pull.”
+    options:
+      - text: Maintainability
+        explanation: Maintainability is about changing Shelf. This is about running it and noticing when something is wrong.
+      - text: Operability
+        correct: true
+        explanation: Right. Making problems visible to the person who runs Shelf is operability.
+      - text: Security
+        explanation: Security is about who may see and change things. This screen exists to help the admin spot a failing source.

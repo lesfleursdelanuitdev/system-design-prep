@@ -1,0 +1,59 @@
+id: u1-which-part
+type: quiz
+title: Which part of the map?
+intro: Each question below comes up while designing Shelf. Which part of the map does it belong to?
+questions:
+  - prompt: “How fast must a lookup be, and how many will there be at the busiest time?”
+    options:
+      - text: Requirements
+        correct: true
+        explanation: Right. How well the system must do something is a (non-functional) requirement.
+      - text: Operations
+        explanation: Operations is about noticing whether you’re meeting the target in production. The target itself is a requirement.
+      - text: Data model
+        explanation: The data model might be shaped by the answer, but the question is about what’s needed, not how it’s stored.
+  - prompt: “Is a scope the same kind of thing as a tag? How do items, tags and scopes relate?”
+    options:
+      - text: Data model
+        explanation: Tables come later. First decide what the concepts are and how they relate.
+      - text: Domain model
+        correct: true
+        explanation: Right. Naming the concepts and their relationships is the domain model.
+      - text: Boundaries
+        explanation: Boundaries group concepts into modules. You need the concepts first.
+  - prompt: “Which part of Shelf is allowed to change an item’s status?”
+    options:
+      - text: Boundaries
+        correct: true
+        explanation: Right. Deciding which module owns which data, and who must ask it, is drawing boundaries.
+      - text: Security
+        explanation: Security is about which *callers* may do what. This is about which part of the code owns the data.
+      - text: State
+        explanation: State describes the stages an item goes through. Who is allowed to move it along is a boundary question.
+  - prompt: “What happens, step by step, when the quiz app pushes a change?”
+    options:
+      - text: Contracts
+        explanation: The contract says what the request and response look like. The step-by-step story, across parts, is a flow.
+      - text: State
+        explanation: State is about the stages one thing passes through, not the order of calls.
+      - text: Flows
+        correct: true
+        explanation: Right. Who calls whom, in what order, is a flow. You’d draw it as a sequence diagram.
+  - prompt: “The nightly pull times out on page 40 of 90. What now?”
+    options:
+      - text: Failure
+        correct: true
+        explanation: Right. What happens when a step fails, is slow or runs twice is exactly what the failure part asks.
+      - text: Operations
+        explanation: Operations makes sure someone *notices*. What the system does about the timeout is a failure decision.
+      - text: Flows
+        explanation: The flow describes the normal path. The failure part asks what happens when a step of it goes wrong.
+  - prompt: “Next year, tags need a colour. How do we add that without breaking the apps?”
+    options:
+      - text: Data model
+        explanation: You’ll add a column, but the hard part of the question is changing things safely while apps depend on them.
+      - text: Evolution
+        correct: true
+        explanation: Right. Changing a live system without breaking the people using it is evolution.
+      - text: Requirements
+        explanation: The new requirement starts it, but *how to change safely* is the evolution question.

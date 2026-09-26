@@ -1,0 +1,85 @@
+---
+unit: 8
+order: 3
+title: Knowing it’s healthy
+summary: Health checks, logs and metrics tell you what Shelf is doing. An SLI and an SLO tell you whether that’s good enough, and the error budget says how much room for trouble is left.
+minutes: 9
+terms: [health-check, log, metric, sli, slo, error-budget]
+mapPart: operations
+---
+
+## In one sentence
+
+To know Shelf is healthy you need signals (health checks, logs and metrics) and a target, an SLO, that says how good is good enough, so you can tell a bad day from a normal one.
+
+## Example: a Tuesday afternoon
+
+At 14:10 the admin’s phone buzzes: “Lookup SLO burning fast.” Here is how the admin finds out what’s wrong, one signal at a time.
+
+**1. Is it up?** The admin opens `/healthz`. It answers `200`: the Shelf process is running. Then `/readyz`, which also answers `200`: Shelf can reach its database. So Shelf isn’t down. Something is slow, or failing some of the time.
+
+**2. Where, and since when?** The dashboard shows requests, errors and p95 response time for each endpoint. Error counts look normal. But p95 for `GET /v1/tags/{tagId}/items` jumped from 60 ms to 900 ms at 14:02. Every other endpoint looks normal.
+
+**3. What exactly happened?** The admin searches the logs for that endpoint since 14:00. The slow requests are all for big tags, such as `favourite`. And there’s one more line: a new release of Shelf finished deploying at 14:01. It changed the lookup query, and for big tags the database no longer uses its index.
+
+**4. Fix, then measure.** At 14:25 the admin rolls back to the previous release. Within a minute, p95 is back to 60 ms.
+
+**5. What did it cost?** For about 23 minutes most lookups took longer than 500 ms. Shelf’s target allows about 43 minutes of that a month. One afternoon used about half of it.
+
+Each signal answered a different question:
+
+| Signal | Answers | In Shelf |
+|---|---|---|
+| Health checks | Is it running? Can it do real work? | `/healthz`, `/readyz` |
+| Metrics | How many, how fast, how often? What changed, and when? | requests, errors and p95 per endpoint; items by status per source; pull outcomes |
+| Logs | What exactly happened, to which request? | a line per request, a line per pull run, a line per deploy |
+| SLI and SLO | Is this good enough for the people using it? | share of lookups answered well; 99.9% a month |
+
+## The general idea
+
+### Health checks
+
+A <Term id="health-check">health check</Term> is a tiny endpoint that says whether Shelf is working. Shelf has two, because they answer different questions.
+
+- **`/healthz`: is the process alive?** It answers without touching anything else. If it stops answering, the server’s process manager restarts Shelf.
+- **`/readyz`: can it do real work?** It checks that the database answers. If it fails, restarting Shelf won’t help; the problem is elsewhere.
+
+Keep both cheap and honest. A `/healthz` that checks the database would restart a healthy Shelf every time the database blinked. A `/readyz` that always says OK stays green through an outage.
+
+### Logs and metrics
+
+A <Term id="log">log</Term> is a record of events, one line each, with the time. It answers “what happened to *this* request?” Good log lines are structured (named fields, not sentences), carry a request id, and never contain a secret. Shelf logs the id of the key that called, never the key itself.
+
+A <Term id="metric">metric</Term> is a number recorded over time: requests per second, errors, p95 response time. Metrics are cheap to keep for months and quick to graph and alert on, but they can’t tell you which request went wrong. Use metrics to notice and logs to explain.
+
+One of Shelf’s metrics is quietly useful: **items by status, per source**. A sudden jump in missing photos is a warning, even when every request succeeds.
+
+### SLIs, SLOs and SLAs
+
+Three names that sound alike, for three different things.
+
+- **What you measure about users’ experience** is a <Term id="sli">service level indicator (SLI)</Term>. Shelf’s: *the share of lookups answered successfully within 500 ms*. A lookup that takes 3 s and then answers `200` counts as a failure. The app’s user has given up by then.
+- **The target for that measure** is a <Term id="slo">service level objective (SLO)</Term>. Shelf’s: *99.9% each calendar month*.
+- **A promise with a penalty**, written into an agreement with a customer, is a <Term id="sla">service level agreement (SLA)</Term>. Shelf has none. The apps are teams in the same organisation, so the SLO is a target Shelf holds itself to, not a contract with money attached.
+
+### The error budget
+
+99.9% leaves 0.1% for things to go wrong. Over a 30-day month that’s about 43 minutes. In lookups, it’s about 4,500 of the 4.5 million in a month. This room for failure is the <Term id="error-budget">error budget</Term>. You met the minutes in [Availability in real time](/learn/requirements/availability-in-real-time/).
+
+The budget turns arguments into arithmetic. With plenty left, the admin can ship risky changes. With little left, it’s time to slow down and make things sturdier. And it makes a better alert: rather than paging on every slow minute, Shelf alerts when the budget is burning fast enough to run out within days, as it did on that Tuesday.
+
+Shelf’s alerts are each something a person must act on: the SLO burning too fast, a failed or held pull, a failed backup, the disk over 80% full. High CPU isn’t on the list. If users don’t feel it, it belongs on a graph, not on the admin’s phone.
+
+<Callout type="tradeoff" title="Why not aim for 100%?">
+Every extra nine allows ten times less trouble. At 99.99%, the month’s budget is about 4 minutes: one slow deploy uses it up, and meeting it would need a second server, beyond Shelf’s $40 a month. At 99%, it’s over 7 hours, and the apps would notice. At 100% there’s no budget at all, so every change becomes a risk nobody may take. 99.9% fits one server and one developer.
+</Callout>
+
+## Common mistakes
+
+- **Measuring what’s convenient instead of what users feel.** CPU and memory graphs come free with most servers. An SLI is about lookups answered well, as the apps see them.
+- **Health checks that lie.** A check that always says OK, or that checks the wrong thing, stays green while users suffer.
+- **Treating the SLO as a floor to hide behind.** Meeting 99.9% doesn’t mean the quiz app is happy. Ask the people who use it, too.
+
+## Try it
+
+<Quiz id="u8-sli-or-slo" />

@@ -1,0 +1,71 @@
+id: u11-which-contract-tool
+type: quiz
+title: Which tool?
+intro: Six situations around Shelf. For each one, pick the tool you would reach for first.
+questions:
+  - prompt: The photo gallery team writes Python. They want a test, in their own build, that checks each page their list endpoint returns has the shape Shelf expects. What should Shelf give them?
+    options:
+      - text: A JSON Schema for a page
+        correct: true
+        explanation: Right. Python (like every other common language) has JSON Schema validators, so the team can check their real responses against Shelf’s file without translating anything.
+      - text: Shelf’s Zod schema
+        explanation: Zod is TypeScript. The Python team can’t run it, and would have to copy it by hand into something else, which is how copies drift.
+      - text: A Protobuf definition
+        explanation: The list endpoint returns JSON. A Protobuf definition describes binary messages, so it can’t check these pages.
+      - text: An AsyncAPI document
+        explanation: AsyncAPI is for messages on queues and topics. The list endpoint is a plain request and response.
+  - prompt: A fourth app is about to plug into Shelf. Its team asks for “the reference for Shelf’s API”, meaning every endpoint, what to send, what comes back, and which errors to expect.
+    options:
+      - text: A JSON Schema for each request and response body
+        explanation: Useful pieces, but JSON Schema describes shapes only. It says nothing about paths, methods, status codes or which error goes with which endpoint.
+      - text: An OpenAPI document
+        correct: true
+        explanation: Right. OpenAPI describes a whole HTTP API, including paths, methods, bodies, status codes and errors, and tools can turn it into readable docs and client code.
+      - text: A well-written README
+        explanation: People can read it, but machines can’t check it or generate anything from it, and nothing tells you when it goes out of date.
+      - text: An AsyncAPI document
+        explanation: AsyncAPI is for message-based systems. Shelf’s API is request and response over HTTP.
+  - prompt: Shelf starts publishing a message to a queue whenever a curator renames a tag, so apps can update their menus. Apps subscribe to the queue. How do you describe this contract?
+    options:
+      - text: OpenAPI
+        explanation: OpenAPI is built around requests and responses. Here nobody calls anybody; messages are published to a channel. (OpenAPI can describe simple webhooks, but queues and topics are AsyncAPI’s home.)
+      - text: AsyncAPI
+        correct: true
+        explanation: Right. AsyncAPI describes channels, the messages on them, and who sends and receives, the way OpenAPI does for HTTP. The message shapes inside are JSON Schema.
+      - text: Protobuf
+        explanation: Protobuf could encode the message body, but it doesn’t describe channels, or who publishes and who subscribes.
+      - text: Zod
+        explanation: Zod could check the message inside Shelf’s TypeScript code, but the apps subscribing need a contract they can read in their own languages.
+  - prompt: Inside Shelf’s TypeScript code, the push handler must reject a malformed batch before touching the database, and the rest of the code should know the exact type of a change.
+    options:
+      - text: Zod
+        correct: true
+        explanation: Right. One Zod definition checks the data at runtime and gives the compiler the matching type, so the check and the type can never disagree.
+      - text: JSON Schema
+        explanation: It can check the batch, with a validator library, but you would need a separate step to get TypeScript types. Zod gives you both from one definition.
+      - text: OpenAPI
+        explanation: The published description of the endpoint, yes. But the check inside the code needs something the code can run; that can be generated from OpenAPI, or written in Zod and used to generate it.
+      - text: Protobuf
+        explanation: Pushes arrive as JSON over HTTP. Protobuf describes binary messages.
+  - prompt: At a much bigger company, two internal services owned by the same team exchange 50,000 small messages a second, and every byte and millisecond counts.
+    options:
+      - text: JSON Schema
+        explanation: It can describe the shape, but the messages would still travel as JSON, which is larger and slower to read than a binary format at this volume.
+      - text: Protobuf
+        correct: true
+        explanation: Right. Compact binary messages, fast to read and write, with numbered fields that let both sides change safely. Both services belong to one team, so nobody minds that people can’t read the bytes.
+      - text: OpenAPI
+        explanation: OpenAPI describes HTTP APIs, usually carrying JSON. At this volume, the size and speed of the messages themselves matter most.
+      - text: Zod
+        explanation: Zod checks data inside TypeScript code. It doesn’t decide how messages travel, and both services may not be TypeScript.
+  - prompt: Shelf’s admin wants the published `openapi.yaml` and the Zod checks in the code never to disagree. What’s the best approach?
+    options:
+      - text: Write both by hand, and review them carefully together
+        explanation: Careful people still miss things, and the two copies will drift. Two hand-written sources of truth is the problem, not the fix.
+      - text: Generate one from the other as part of the build
+        correct: true
+        explanation: Right. One source of truth per contract. Either write Zod and generate OpenAPI, or write OpenAPI and generate the checks, and review the result like any other change.
+      - text: Drop `openapi.yaml`, and send app teams the Zod code
+        explanation: App teams in other languages can’t use Zod, and the published contract is how they learn the API.
+      - text: Drop the Zod checks, and trust callers to follow the published spec
+        explanation: Then a malformed batch reaches the database. A contract is only as good as the checks behind it.

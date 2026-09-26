@@ -1,0 +1,36 @@
+id: u3-who-owns-it
+type: sort
+title: Who owns the truth?
+intro: Eight pieces of data from Shelf and the apps around it. For each one, decide which side is its source of truth. The other side may keep a copy, but the owner is right by definition.
+buckets:
+  - id: shelf
+    label: Shelf
+    hint: Shelf creates it and is the only one who may change it.
+  - id: app
+    label: The app
+    hint: The app creates it. Shelf may keep a cached copy.
+items:
+  - text: A recipe’s title, “Lemon tart”
+    bucket: app
+    reason: The recipe site creates and edits titles. Shelf keeps a cached copy so lookups can show it, refreshed by pushes and the nightly pull.
+  - text: The name of the tag `vegetarian`
+    bucket: shelf
+    reason: Tags are Shelf’s. Curators create and rename them in Shelf, and the apps only read them.
+  - text: The scope tree (`/`, `/food`, `/learning`, `/learning/maths`, `/photos`)
+    bucket: shelf
+    reason: The admin manages scopes in Shelf. Each app is given its home scope when it registers.
+  - text: Whether recipe `1042` still exists
+    bucket: app
+    reason: Only the recipe site can say. Shelf’s status (present or missing) is its record of what the app has told it, and it follows the app.
+  - text: A photo’s link
+    bucket: app
+    reason: The gallery decides where its photos live. Shelf keeps a copy of the link so lookups can point to the photo.
+  - text: Which items have the tag `exam-prep`
+    bucket: shelf
+    reason: Taggings are what Shelf exists to keep. An app may cache the answer to a lookup, but the answer comes from Shelf.
+  - text: That a maths quiz lives in `/learning/maths`
+    bucket: app
+    reason: The tricky one. Shelf owns the scope tree, but the quiz app decides where each of its quizzes goes, inside its home scope `/learning`. Shelf stores a copy with each item.
+  - text: The privileges on the quiz app’s API key
+    bucket: shelf
+    reason: Keys and privileges are Shelf’s, set by the admin. The quiz app holds the secret, but it can’t change what the key may do.

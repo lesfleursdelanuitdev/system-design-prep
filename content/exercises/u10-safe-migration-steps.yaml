@@ -1,0 +1,67 @@
+id: u10-safe-migration-steps
+type: quiz
+title: A safe migration, step by step
+intro: Shelf is moving from one scope per item (the `items.scope` column) to several (an `item_scopes` table), without any app noticing. Each question is about one moment in that change.
+questions:
+  - prompt: Which order for the first steps is safe?
+    options:
+      - text: Add `item_scopes`, backfill it, then start writing to both
+        explanation: There’s a gap between the end of the backfill and the first dual write. Any item whose scope changes in that gap is updated only in `items.scope`, so the new table is quietly wrong for it.
+      - text: Add `item_scopes`, switch reads to it, then backfill
+        explanation: For a while, reads go to a table that is nearly empty. Tag checks fail and lookups miss items, which every app would notice at once.
+      - text: Add `item_scopes`, start writing to both, backfill, check they agree, then switch reads
+        correct: true
+        explanation: Right. Dual writes keep every new change in step, the backfill copies everything older, and the check proves the two agree before anything depends on the new table.
+      - text: Add `item_scopes`, start writing to both, switch reads, then backfill
+        explanation: Close, but reads switch too early. Items that haven’t changed since the dual writes began have no row in `item_scopes` yet, so lookups would miss them until the backfill finishes.
+  - prompt: |
+      Here is someone’s plan. Which step is unsafe?
+
+      1. Add the `item_scopes` table.
+      2. Write every scope change to both places.
+      3. Backfill `item_scopes` and check it matches.
+      4. In one release, switch reads to `item_scopes` and drop `items.scope`.
+      5. Add the optional `scopes` field to the push API.
+    options:
+      - text: Step 2, because writing twice is wasteful
+        explanation: Writing twice costs a little extra work for a few weeks. It is what keeps the old column current, so there’s a way back.
+      - text: Step 3, because a backfill can’t run while the system is live
+        explanation: It can, if it works in small batches and is safe to run twice. Shelf’s backfill copies 1,000 items at a time and skips rows that already exist.
+      - text: Step 4, because it removes the way back in the same release that changes how Shelf reads
+        correct: true
+        explanation: Right. If the switched reads turn out to be slow or wrong, there’s no old column to flip back to. Switch reads first, keep writing both, and drop the column weeks later, once nothing reads it.
+      - text: Step 5, because adding a field to the API is a breaking change
+        explanation: Adding an optional field is backward compatible. Apps that don’t send `scopes` carry on exactly as before.
+  - prompt: After the change, the recipe site still sends only `scope` in its pushes, never `scopes`. What should Shelf do?
+    options:
+      - text: Reject the change with `invalid_request`, because `scope` is the old way
+        explanation: That breaks an app that did nothing wrong. Removing or refusing a field that callers rely on is a breaking change.
+      - text: Treat `scope` as a list with one entry, exactly as before
+        correct: true
+        explanation: Right. The recipe site sees no difference. `scopes` is an extra ability for apps that need it, not a new obligation for all of them.
+      - text: Ignore `scope` and keep whatever scopes the item already had
+        explanation: Then a recipe that moves scope would silently stay where it was. The app’s change would be lost without any error.
+      - text: Move the recipe site to a new `/v2` push endpoint
+        explanation: Not needed. Adding an optional field fits in version 1. A new version is for changes that would break existing callers.
+  - prompt: Two days after switching reads to `item_scopes`, the photo gallery’s lookups have slowed from 120 ms to 450 ms at p95. The target is 200 ms. What is the best next move?
+    options:
+      - text: Flip reads back to `items.scope`, then find out why
+        correct: true
+        explanation: Right. Shelf still writes both, so flipping back loses nothing, and lookups are fast again within seconds. The likely cause (a missing index on `item_scopes`, say) can be fixed calmly.
+      - text: Drop `items.scope` to cut the extra write work
+        explanation: Dropping the column can’t be undone, and it doesn’t make reads faster. It removes the one quick way out.
+      - text: Stop writing to `item_scopes` until the cause is found
+        explanation: Then the new table goes stale, and you would need another backfill before switching again. Keep writing both.
+      - text: Leave it, because 450 ms is still under the 500 ms p99 target
+        explanation: The p95 target is 200 ms, and it is being missed. The p99 target is a separate promise, not a fallback for the p95 one.
+  - prompt: When is it safe to drop the `items.scope` column?
+    options:
+      - text: As soon as the backfill has finished
+        explanation: At that point every read still uses `items.scope`. Dropping it would break Shelf itself.
+      - text: As soon as reads have switched to `item_scopes`
+        explanation: Too soon. You lose the way back, and something you didn’t know about (a report, an old worker) may still read the column.
+      - text: When Shelf has stopped writing it, nothing has read it for a couple of weeks, and there’s a fresh backup
+        correct: true
+        explanation: Right. Removing is the one step you can’t undo, so it needs proof that nothing uses the old shape, and a backup in case you were wrong.
+      - text: Never, because dropping a column is always a breaking change
+        explanation: It’s Shelf’s own column. No app sees it, so dropping it breaks no contract once Shelf’s own code has stopped using it.

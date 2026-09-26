@@ -1,0 +1,51 @@
+id: u11-which-zoom-level
+type: sort
+title: Which zoom level?
+intro: Each of these is a box in one of Shelf’s C4 diagrams. Which level of diagram does it first appear on?
+buckets:
+  - id: context
+    label: "Level 1: context"
+    hint: The system in its world.
+  - id: containers
+    label: "Level 2: containers"
+    hint: What runs or stores data inside the system.
+  - id: components
+    label: "Level 3: components"
+    hint: The parts inside one container.
+  - id: code
+    label: "Level 4: code"
+    hint: Classes and functions inside one component.
+items:
+  - text: The photo gallery
+    bucket: context
+    reason: Another team’s system that Shelf talks to. It sits around Shelf in the context diagram, and never gets zoomed into, because it isn’t Shelf’s.
+  - text: Postgres
+    bucket: containers
+    reason: A database stores data on its own, so it’s a container. It’s inside Shelf, so it can’t appear at level 1, where Shelf is one box.
+  - text: The `tagging` module
+    bucket: components
+    reason: A main part of the API service’s code. You only see it once you zoom into that container.
+  - text: A curator
+    bucket: context
+    reason: People appear at level 1, around the system. (They may reappear at level 2 to show which container they use.)
+  - text: The `HttpListKind` class
+    bucket: code
+    reason: A class inside the `sync` component. It only appears when you zoom into that one component.
+  - text: The background worker
+    bucket: containers
+    reason: It runs separately from the API service, on the same server. Running on its own is what makes it a container.
+  - text: Shelf, as a single box
+    bucket: context
+    reason: The whole point of level 1. Shelf is one box, with no insides shown.
+  - text: The `access` module
+    bucket: components
+    reason: A part of the API service’s code (keys and privileges), so it appears at level 3.
+  - text: The function that checks whether one scope is inside another
+    bucket: code
+    reason: Tempting to say components, because it belongs to `scopes`. But a single function is inside the component, so it’s level 4.
+  - text: The admin web app
+    bucket: containers
+    reason: The screens for tagging and setup run separately from the API service they call. That makes them a container.
+  - text: The `sync` module
+    bucket: components
+    reason: A module is a component. It appears when you zoom into the API service (and it’s also inside the worker).

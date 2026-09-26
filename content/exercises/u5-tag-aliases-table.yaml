@@ -1,0 +1,55 @@
+id: u5-tag-aliases-table
+type: diagram
+title: Add the tag_aliases table
+prompt: |
+  When a curator renames a tag, its old name keeps working for 30 days: a lookup by the old name still finds the tag, and nobody can create a new tag with that name in that scope meanwhile.
+
+  Shelf stores this in a table called `tag_aliases`. Add it to the diagram below, with its columns, its primary key, its foreign keys and its relationships to `SCOPES` and `TAGS`.
+
+  Three questions to answer as you draw it:
+
+  1. What identifies one alias?
+  2. What does it point at?
+  3. How does Shelf know when it has stopped working?
+starter: |
+  erDiagram
+    SCOPES ||--o{ TAGS : defines
+    SCOPES {
+      text path PK
+    }
+    TAGS {
+      text id PK
+      text scope FK
+      text name
+    }
+hints:
+  - Two tags in different scopes may both once have been called `veggie`. Is the old name enough, on its own, to identify an alias?
+  - A lookup by the old name has to end up at a tag. Which column gets it there?
+  - Nothing here lasts for ever. What does Shelf need to store so it can tell that the 30 days are up?
+modelAnswer: |
+  erDiagram
+    SCOPES ||--o{ TAGS : defines
+    SCOPES ||--o{ TAG_ALIASES : "reserves names in"
+    TAGS ||--o{ TAG_ALIASES : "was once called"
+    SCOPES {
+      text path PK
+    }
+    TAGS {
+      text id PK
+      text scope FK
+      text name
+    }
+    TAG_ALIASES {
+      text scope PK, FK
+      text name PK "old name, compared ignoring case"
+      text tag_id FK
+      timestamptz expires_at "rename time + 30 days"
+    }
+modelDescription: The tag_aliases table has one row per old name. Its primary key is the scope plus the old name, so a name can be reserved only once in each scope, compared ignoring case like tag names are. The scope column is also a foreign key to scopes, and tag_id is a foreign key to the tag the old name now leads to. The expires_at column records when the alias stops working, 30 days after the rename. A scope can hold any number of aliases, and a tag can have any number of old names.
+checklist:
+  - The primary key stops the same old name being reserved twice in one scope
+  - The alias stores its scope, as a foreign key to `SCOPES`
+  - The alias points at the tag it now means, with a foreign key to `TAGS`
+  - A column records when the alias expires
+  - Both relationships are one-to-many, drawn from `SCOPES` and `TAGS` to the new table
+  - "Bonus: you noticed that “nobody can take that name meanwhile” needs a check across two tables (`tags` and `tag_aliases`), so it lives in code in `tagging`, not in a single constraint"

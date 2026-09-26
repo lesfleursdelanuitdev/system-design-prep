@@ -1,0 +1,64 @@
+id: u7-tagging-sequence
+type: diagram
+title: A curator tags a recipe
+prompt: |
+  A curator puts the tag `vegetarian` (id `tag_4vn8x2`, defined in `/food`) on the recipe `r-812`. The request is:
+
+  `PUT /v1/items/recipes/r-812/tags/tag_4vn8x2`
+
+  Tagging is safe to repeat. If the recipe already has the tag, nothing changes and Shelf answers with `created: false` instead of `created: true`.
+
+  Draw the flow as a sequence diagram. Include:
+
+  - the curator, Shelf’s API, the modules involved (`access`, `tagging` and `catalog`) and the database
+  - a reply for every call
+  - an `alt` box for “new tagging” and “already tagged”
+
+  Before it writes anything, the `tagging` module needs two answers from `catalog`: is the item present, and which scope is it in?
+
+  **Stretch:** add a third branch for a recipe that is missing. Shelf refuses with `item_missing` (409).
+starter: |
+  sequenceDiagram
+    autonumber
+    participant C as Curator
+    participant API as Shelf API
+    C->>API: PUT /v1/items/recipes/r-812/tags/tag_4vn8x2
+hints:
+  - Start from the push diagram in this lesson. The key is checked before any real work.
+  - "A participant can send an arrow to itself for a check it does alone, such as `Tagging->>Tagging: does the tag fit /food?`"
+  - The `tagging` module owns taggings; `catalog` owns items. So `tagging` asks `catalog` about the recipe instead of reading the items table itself.
+  - Put the `alt` box around the part that differs, the database’s answer and everything after it.
+modelAnswer: |
+  sequenceDiagram
+    autonumber
+    participant C as Curator
+    participant API as Shelf API
+    participant Access as access
+    participant Tagging as tagging
+    participant Catalog as catalog
+    participant DB as Database
+    C->>API: PUT /v1/items/recipes/r-812/tags/tag_4vn8x2
+    API->>Access: may this key apply tags to this item?
+    Access-->>API: yes
+    API->>Tagging: tag r-812 with tag_4vn8x2
+    Tagging->>Catalog: is recipes/r-812 present, and in which scope?
+    Catalog-->>Tagging: present, in /food
+    Tagging->>Tagging: is /food inside the scope of the tag? yes
+    Tagging->>DB: add the tagging unless it is already there
+    alt new tagging
+      DB-->>Tagging: added
+      Tagging-->>API: created
+      API-->>C: OK, created true
+    else already tagged
+      DB-->>Tagging: already there, nothing changed
+      Tagging-->>API: not created
+      API-->>C: OK, created false
+    end
+modelDescription: The curator sends the PUT request to Shelf’s API. The API asks the access module whether this key may apply tags to this item, and access says yes. The API asks the tagging module to tag the recipe. Tagging asks catalog whether the recipe is present and which scope it is in, and catalog replies that it is present, in /food. Tagging checks for itself that the tag’s scope, /food, covers the recipe’s scope. Tagging then asks the database to add the tagging unless it is already there. In the first branch the database adds it, and the curator gets OK with created true. In the second branch the tagging already exists, nothing changes, and the curator gets OK with created false.
+checklist:
+  - Start with the curator’s `PUT` request and end with a reply to the curator
+  - Check the key before doing any real work
+  - Have `tagging` ask `catalog` about the recipe, instead of reaching into the items table
+  - Check that the recipe is present and inside the tag’s scope before writing
+  - Have a dashed reply for every call
+  - Use `alt` and `else` for “new tagging” and “already tagged”, with a successful answer in both branches

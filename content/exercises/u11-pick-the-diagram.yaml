@@ -1,0 +1,93 @@
+id: u11-pick-the-diagram
+type: quiz
+title: Pick the diagram
+intro: Eight situations that come up while designing and running Shelf. For each one, choose the diagram that answers the question best.
+questions:
+  - prompt: Before anyone designs tables, you want to agree with the three app teams what a source, an item, a scope and a tag are, and how they relate.
+    options:
+      - text: Class diagram
+        correct: true
+        explanation: Right. Kinds of thing, their attributes and the relationships between them (a source owns many items, a tag is defined in one scope) are exactly what a class diagram shows.
+      - text: Component diagram
+        explanation: A component diagram shows parts of the software and their dependencies. The question is about the concepts in the problem, before any software exists.
+      - text: Sequence diagram
+        explanation: A sequence diagram shows one flow over time. Here nothing is happening yet; you’re naming things and relationships.
+      - text: State diagram
+        explanation: A state diagram follows one thing through its stages. This question is about several kinds of thing and how they connect.
+  - prompt: The quiz app times out while pushing a batch, then sends it again with the same `Idempotency-Key`. You want to show exactly what the app, the API and the database each do, and in what order.
+    options:
+      - text: Activity diagram
+        explanation: An activity diagram could show the decision (“seen this key before?”), but it loses who does what. With three participants trading messages, you want one column each.
+      - text: Sequence diagram
+        correct: true
+        explanation: "Right. Several participants, messages in time order, and a retry in the middle: that’s what sequence diagrams are for."
+      - text: State diagram
+        explanation: The idempotency key has a short life, but the question is about who calls whom, and when.
+      - text: Class diagram
+        explanation: A class diagram shows structure, not what happens over time.
+  - prompt: A new curator asks, “When does an item lose its tags, and can it ever get them back?”
+    options:
+      - text: Activity diagram
+        explanation: An activity diagram shows the steps of a process, such as the retention job. The curator is asking about the stages of one item and what moves it between them.
+      - text: Sequence diagram
+        explanation: No conversation between parts is being asked about. The answer is a lifecycle.
+      - text: State diagram
+        correct: true
+        explanation: Right. Present, missing, trashed and gone, with the events that move an item between them (30 days pass, seen again) answer the question at a glance.
+      - text: Class diagram
+        explanation: A class diagram can list an item’s `status` attribute, but not how it changes over time.
+  - prompt: The push handler has to decide what to do with each change. Is it for this source? Is its scope inside the source’s home scope? Is it older than the stored `updatedAt`? The answers lead to apply, ignore or reject. You want to lay out that logic.
+    options:
+      - text: Sequence diagram
+        explanation: Tempting, because a push is a flow. But the question is about one part’s decisions, not a conversation between parts. Branches in a sequence diagram get hard to read quickly.
+      - text: Activity diagram
+        correct: true
+        explanation: "Right. A chain of decisions leading to different outcomes is a flowchart: diamonds for the questions, boxes for apply, ignore and reject."
+      - text: State diagram
+        explanation: The item’s state may change as a result, but the question is about the checks a change goes through.
+      - text: Component diagram
+        explanation: A component diagram shows which parts depend on which, not the logic inside one of them.
+  - prompt: You suspect someone has made the `scopes` module call `tagging`, which would point a dependency the wrong way. You want a picture of which modules depend on which.
+    options:
+      - text: Class diagram
+        explanation: A class diagram could show code-level classes, but the question is about the big parts and their dependencies.
+      - text: Component diagram
+        correct: true
+        explanation: Right. Boxes for modules and arrows for “uses” make a wrong-way arrow jump out. In Shelf every arrow should point towards `scopes`, never away from it.
+      - text: Sequence diagram
+        explanation: A sequence diagram shows one flow. A bad dependency might appear in it, or might not, depending on which flow you picked.
+      - text: Activity diagram
+        explanation: An activity diagram shows steps in a process, not how the parts of the system depend on each other.
+  - prompt: The photo gallery team asks how the nightly pull pages through their list endpoint. Shelf calls, their app answers with a page, Shelf calls again with `nextCursor`, and retries a page that fails.
+    options:
+      - text: Activity diagram
+        explanation: "Tempting, because there’s a loop and a retry. But the team wants to see the conversation between two systems: who sends what, and when. A sequence diagram can show the loop with a loop box."
+      - text: Sequence diagram
+        correct: true
+        explanation: Right. Two participants trading requests and replies over time is the sequence diagram’s home ground, and it shows the gallery team exactly what their endpoint will receive.
+      - text: Component diagram
+        explanation: A component diagram would show that Shelf depends on the gallery’s endpoint, but nothing about the order of calls.
+      - text: Class diagram
+        explanation: A class diagram shows the shape of things, not calls over time.
+  - prompt: The admin’s dashboard shows each night’s pull as running, complete, abandoned or held, and a held run can be approved. You want to show how a run moves between those.
+    options:
+      - text: State diagram
+        correct: true
+        explanation: Right. One thing (a pull run) with named stages and the events that move it on, including the admin approving a held run.
+      - text: Activity diagram
+        explanation: The pull’s steps are a process, and the lesson drew them as an activity diagram. But this question is about the stages the run itself can be in, as shown on the dashboard.
+      - text: Sequence diagram
+        explanation: No conversation is being asked about, only the stages of one run.
+      - text: Component diagram
+        explanation: A component diagram shows parts and dependencies, not how one thing changes over time.
+  - prompt: You want to show what the hourly retention job does. For each missing item, check how long it has been missing; after 30 days, trash it (removing its tags and recording that in the audit log); for each trashed item, delete it after 7 more days.
+    options:
+      - text: State diagram
+        explanation: "Very close. The item’s states are involved, but the question is about the job: its loop over items and the checks it makes. The state diagram shows the item’s life; the activity diagram shows the job’s steps."
+      - text: Sequence diagram
+        explanation: The job mostly talks to one database. A sequence diagram would be two columns with a long list of arrows, and the decisions would get lost.
+      - text: Activity diagram
+        correct: true
+        explanation: Right. A process with loops and decisions (how long missing? trash or leave?) is what an activity diagram is for.
+      - text: Class diagram
+        explanation: A class diagram shows structure, not a job’s steps.

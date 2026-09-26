@@ -1,0 +1,93 @@
+---
+unit: 3
+order: 1
+title: Finding the nouns
+summary: Pull the concepts out of the requirements. Most nouns name real concepts, some are facts about a concept, and some only look important.
+minutes: 10
+terms: [domain, domain-model, entity, attribute]
+---
+
+## In one sentence
+
+The concepts in a design come from the nouns in its requirements, once you have sorted the real concepts from the facts about them and from the words that only look important.
+
+## Example: underlining Shelf’s stories
+
+Here are Shelf’s five main user stories, written the way [What the system must do](/learn/requirements/what-it-must-do/) teaches and shortened a little. Read them with a pencil in hand and underline every noun.
+
+> **S1.** As a **curator**, I want to put a **tag** on an **item**, so that **people** can find it by that tag. A tag can only go on items inside its **scope**.
+>
+> **S2.** As an **app**, I want to ask for the items that have a tag, so that I can show them to my **users**. Results come in **pages** of up to 100.
+>
+> **S3.** As an app, I want to tell Shelf when my items change, so that **titles** and **deletions** show up quickly.
+>
+> **S4.** As an **admin**, I want to register a new app with a **name**, a **home scope** and a **list URL**. The app gets a **key**.
+>
+> **S5.** As an admin, I want to know when a **nightly pull** fails, with an **alert** that names the app.
+
+That’s about 15 nouns. They are not all the same kind of thing. Ask three questions of each one:
+
+- Will Shelf need to recognise this again tomorrow?
+- Is it a fact about something else?
+- Or is it something that happens and is over?
+
+| Noun | What it really is | Verdict |
+|---|---|---|
+| item | A recipe, quiz or photo that an app owns. Shelf must recognise it every time the app mentions it. | **Concept** |
+| tag | A label such as `vegetarian`, created once and used for years. | **Concept** |
+| scope | A folder for tags, such as `/food`. Tags and items each live in one. | **Concept** |
+| app | Something that supplies items. | **Concept**, named *source* |
+| key | The secret an app or curator sends to call Shelf. It has privileges and a scope, and it can be revoked. | **Concept**, named *API key* |
+| title, name, list URL | Facts about an item, a tag or a source. | **Attribute** of another concept |
+| deletion | Something that happens to an item. It changes one fact about it: its status. | **Attribute** (the item’s status) |
+| page | A slice of one answer. It exists for the length of one request. | Not a concept |
+| curator, admin | Roles. Shelf knows the keys they use, not the people. | Not a concept (yet) |
+| people, users | The apps’ users never talk to Shelf at all. | Not in Shelf’s model |
+| nightly pull, alert | Things Shelf does. They leave records for operations, but they aren’t what Shelf is *about*. | Not in the core model |
+
+One important word never appears as a noun at all. S2 says “ask for the items that have a tag”: a *lookup*. It is something an app does, and it will become an operation in a contract. It doesn’t need a place in the model.
+
+### Two nouns that were hiding
+
+**Tagging.** S1 says “put a tag on an item”. That’s a verb phrase. But ask a question about it: *when* was this tag put on this item, and *by whom*? The moment the link itself has facts, it is a thing. Shelf calls one tag on one item a *tagging*. There will be about 300,000 of them, and they are the most valuable data Shelf holds.
+
+**API key.** The word “key” appears once in the stories, and again in the security requirement: “every call needs a key; a key sees only its own scope”. A key is created, given privileges, limited to a scope, and one day revoked. Something with a life like that is a concept, not a detail of the app that uses it.
+
+### Why “source” and not “app”
+
+Everyday speech says “app”. The model says *source*, for a reason: what matters to Shelf is that it supplies items. The next thing to plug in might not be an app at all. Choose the name that describes the role, then use it everywhere: in the code, in the API (`/v1/sources/{sourceId}/changes`) and in the docs.
+
+### And what about “recipe”?
+
+A recipe, a quiz and a photo are all items. The model has one item concept, not three. With a recipe concept, Shelf would need a new concept for every app that plugs in, and before long it would care about cooking times. Shelf is about labelling things it doesn’t own, so it models the general idea and nothing more.
+
+The result is six concepts: **source, item, scope, tag, tagging and API key**. That short list is the start of Shelf’s domain model.
+
+## The general idea
+
+The <Term id="domain">domain</Term> is the part of the world your system is about. For Shelf, that’s items, tags and scopes, not HTTP or Postgres. A <Term id="domain-model">domain model</Term> names the main concepts in the domain and says how they relate. It comes before tables and before code, because both should be shaped by it.
+
+The concepts are usually hiding in the nouns of your requirements. Underline them, then sort each one with four questions:
+
+1. **Does the system need to recognise it again later?** Then it has an identity of its own and lasts over time. It is an <Term id="entity">entity</Term>: item, tag, scope, source.
+2. **Is it a fact about something else?** Then it is an <Term id="attribute">attribute</Term> of that thing: an item’s title, a tag’s name.
+3. **Is it something that happens, or exists only for a moment?** Then it is an operation or an event, not a concept: a lookup, a page of results.
+4. **Is it one example of something more general?** Then model the general thing: item, not recipe.
+
+Listen for verbs that hide nouns, too. When people start asking questions about an action (“when?”, “who?”, “can it be undone?”), the action has become a thing to model.
+
+Then write the words down. A short list of concepts, each with one sentence, stops “item” meaning a recipe to one person and a recipe’s web page to another. Use the same words in the code and the API, so a reader never has to translate.
+
+<Callout type="tip" title="A noun can change sides">
+Whether something is a concept depends on what the system must do. Today a curator is a role that a key has. If a future story says “show who tagged what, with their name and team”, curators become a concept with their own identity. Read the nouns again whenever the requirements change.
+</Callout>
+
+## Common mistakes
+
+- **Modelling the examples.** A recipe, a quiz and a photo concept instead of one item concept. Every new app would change the model.
+- **Making every noun a concept.** A page of results or a lookup has no life of its own. Giving it a place in the model only adds noise.
+- **Missing the noun inside a verb.** “Put a tag on an item” sounds like an action, but the link has facts of its own. Leave it out and there is nowhere to store them.
+
+## Try it
+
+<Sort id="u3-concept-or-not" />

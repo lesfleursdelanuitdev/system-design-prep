@@ -1,0 +1,60 @@
+id: u8-sli-or-slo
+type: quiz
+title: Is Shelf healthy?
+questions:
+  - prompt: “The share of lookups answered successfully within 500 ms.” What is this?
+    options:
+      - text: An SLI
+        correct: true
+        explanation: Right. It’s a measurement of how well Shelf is doing for its users. It says nothing yet about how good is good enough.
+      - text: An SLO
+        explanation: An SLO is a target, such as “99.9% each month”. This sentence names what to measure, with no target attached.
+      - text: An SLA
+        explanation: An SLA is a promise to a customer with a penalty if it’s missed. This is a measurement, and Shelf has no SLA.
+  - prompt: “99.9% of lookups answered successfully within 500 ms, each calendar month.” What is this?
+    options:
+      - text: An SLI
+        explanation: The SLI is the measurement inside it. Adding “99.9% each month” turns it into a target.
+      - text: An SLO
+        correct: true
+        explanation: Right. A target for an SLI, over a stated period.
+      - text: An error budget
+        explanation: The error budget is what the target leaves over, the 0.1%. This is the target itself.
+  - prompt: Shelf’s lookups have an SLO of 99.9% a month. Roughly how much bad time does that allow in a 30-day month?
+    options:
+      - text: About 4 minutes
+        explanation: That’s 99.99%, one more nine. Each nine allows ten times less.
+      - text: About 43 minutes
+        correct: true
+        explanation: Right. 0.1% of 43,200 minutes is 43.2 minutes. That’s the error budget.
+      - text: About 7 hours
+        explanation: That’s 99%, one nine fewer. It’s the target for Shelf’s admin screens, not for lookups.
+      - text: About 9 hours
+        explanation: That’s what 99.9% allows over a whole year, not a month.
+  - prompt: "`/healthz` answers `200`, but `/readyz` answers `503`. What’s the most likely problem?"
+    options:
+      - text: The Shelf process has crashed
+        explanation: A crashed process couldn’t answer `/healthz` at all.
+      - text: Shelf is running, but can’t reach its database
+        correct: true
+        explanation: Right. `/healthz` only says the process is alive. `/readyz` checks that Shelf can do real work, which needs the database.
+      - text: Lookups are slower than 500 ms
+        explanation: Health checks don’t measure response times. That shows up in the metrics and the SLI.
+  - prompt: Last night’s pull for the photo gallery was held. Where does the admin look first to find out why?
+    options:
+      - text: The p95 response-time graph for lookups
+        explanation: That metric is about lookups, not the pull. It would look normal.
+      - text: The log lines for last night’s pull run
+        correct: true
+        explanation: Right. Logs say what exactly happened, such as how many photos the listing contained and how many would have been marked missing.
+      - text: "`/healthz`"
+        explanation: It only says Shelf is running now. It knows nothing about last night.
+  - prompt: Which of these should send the admin an alert?
+    options:
+      - text: CPU use has been at 70% for an hour
+        explanation: If lookups are still fast, users don’t feel it. That belongs on a graph, not on the admin’s phone.
+      - text: The error budget is burning fast enough to run out within days
+        correct: true
+        explanation: Right. It’s about what users feel, and someone needs to act before the month’s budget is gone.
+      - text: One lookup took 800 ms
+        explanation: One slow lookup is well within the budget. Alerting on single requests trains people to ignore alerts.

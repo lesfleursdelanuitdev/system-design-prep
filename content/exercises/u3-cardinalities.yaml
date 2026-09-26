@@ -1,0 +1,57 @@
+id: u3-cardinalities
+type: quiz
+title: How many of each?
+intro: Five questions about the relationships in Shelf’s domain model. Try saying each one as a sentence, both ways round, before you pick.
+questions:
+  - prompt: Each item belongs to exactly one source, and a source can own any number of items. What shape of relationship is that?
+    options:
+      - text: One-to-one
+        explanation: One-to-one would mean each source owns a single item. The recipe site owns about 12,000.
+      - text: One-to-many
+        correct: true
+        explanation: Right. One source, many items, and each item has exactly one source. It’s also a belongs-to, because an item can’t exist without its source.
+      - text: Many-to-many
+        explanation: That would need an item to belong to several sources. The recipe site’s `1042` and the gallery’s `1042` are two different items, not one item with two sources.
+  - prompt: Recipe `1042` has three tags, and the tag `favourite` is on 900 items. How should the domain model show items and tags?
+    options:
+      - text: A list of tag names as an attribute of each item
+        explanation: It holds the names, but there’s nowhere to record when or by whom each tag was added, and finding every `favourite` item means reading all 60,000 items.
+      - text: A one-to-many, because each tag is on many items
+        explanation: True from the tag’s side, but read it the other way. An item can also have many tags, so it’s many-to-many.
+      - text: A many-to-many, drawn as a Tagging concept between Item and Tag
+        correct: true
+        explanation: Right. The link has facts of its own (when, by whom), so it becomes a concept. Each tagging joins exactly one tag to exactly one item.
+  - prompt: |
+      Shelf’s class diagram has this line:
+
+      ```
+      Tag "0..*" --> "1" Scope : defined in
+      ```
+
+      What does it say?
+    options:
+      - text: Each scope has exactly one tag
+        explanation: Each number counts the class it sits next to. The `1` is next to Scope, so it counts scopes per tag, not tags per scope.
+      - text: Each tag is defined in exactly one scope, and a scope can define any number of tags, including none
+        correct: true
+        explanation: Right. `1` next to Scope means one scope per tag. `0..*` next to Tag means any number of tags per scope.
+      - text: A tag can be defined in any number of scopes
+        explanation: The `0..*` sits next to Tag, so it counts tags, not scopes. Shelf deliberately gives each tag exactly one scope.
+  - prompt: Which of these is a belongs-to relationship, where the thing on the “many” side can’t exist without the other and can’t move to another?
+    options:
+      - text: A quiz and the scope it lives in
+        explanation: The quiz app can move a quiz from `/learning` to `/learning/maths` and it’s still the same quiz. Exactly one scope, but not belongs-to.
+      - text: An item and its source
+        correct: true
+        explanation: Right. Recipe `1042` only means something as the recipe site’s item, and it can never become another app’s.
+      - text: A tag and the items it’s on
+        explanation: That’s many-to-many, and a tag with no items at all is still a perfectly good tag.
+  - prompt: Where does the rule “a tag can only go on items in its scope or below it” belong?
+    options:
+      - text: In the numbers on the line between Tag and Scope
+        explanation: Those only say each tag has one scope. The rule compares two scopes (the tag’s and the item’s), which no single line can express.
+      - text: Nowhere, because it follows from the diagram
+        explanation: The diagram allows a tagging between any tag and any item. Without the written rule, `vegetarian` on a photo looks fine.
+      - text: Written in words next to the diagram
+        correct: true
+        explanation: Right. A domain model is the diagram plus the rules it can’t show. This rule will later be checked in code.

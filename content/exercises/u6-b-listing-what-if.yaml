@@ -1,0 +1,63 @@
+id: u6-b-listing-what-if
+type: quiz
+title: What happens if…?
+intro: Six nights of Shelf’s pull. For each, decide what Shelf does, using the list endpoint’s contract and its guards.
+questions:
+  - prompt: The recipe site’s listing has 24 pages. Page 12 times out, and so do all three retries (after 2, 4 and 8 s).
+    options:
+      - text: Shelf marks the items from pages 1–11 as present and everything else missing
+        explanation: That treats half a listing as the whole truth. About 6,500 recipes would look deleted because of one slow page.
+      - text: Shelf skips page 12 and carries on with page 13
+        explanation: It can’t. Page 13 needs the `nextCursor` from page 12, and a skipped page would make its items look deleted anyway.
+      - text: Shelf abandons the listing and marks nothing missing tonight
+        correct: true
+        explanation: Right. A failed page abandons the whole listing. Shelf tries again tomorrow night; being a day late is far cheaper than wrongly removing tags.
+      - text: Shelf holds the run and waits for the admin to approve it
+        explanation: Holding is for a *complete* listing whose result looks suspicious (the 20% guard). An incomplete listing is abandoned outright.
+  - prompt: Page 7 of the quiz app’s listing fails twice with `503 unavailable`, then arrives on the third try.
+    options:
+      - text: The listing carries on and can still be complete
+        correct: true
+        explanation: Right. Retries are there for exactly this. The listing only fails if a page still fails after all three retries.
+      - text: The listing is abandoned, because a page failed
+        explanation: A page that arrives within its retries hasn’t failed. Otherwise every brief blip would cost a night.
+      - text: Shelf starts the listing again from the beginning
+        explanation: Shelf restarts only when the app says the cursor is invalid (`400 invalid_cursor`). A `503` is retried in place.
+  - prompt: A bug in the quiz app returns `nextCursor` of `null` after 1,000 of its 3,000 quizzes.
+    options:
+      - text: 2,000 quizzes are marked missing, and their tags go after 30 days unless someone notices
+        explanation: The listing looks complete, so guard 1 passes it. That’s why there is a second guard.
+      - text: The listing is abandoned, because it is incomplete
+        explanation: Shelf can’t tell. From its side, `null` means complete. Only the size of the result gives the bug away.
+      - text: Shelf holds the run and alerts the admin, because two-thirds of the quizzes would go missing
+        correct: true
+        explanation: Right. 2,000 out of 3,000 is 67%, far above 20%. The circuit breaker stops the run, and a person looks before anything is marked.
+  - prompt: The recipe site really did delete 300 old recipes last week, and forgot to push the deletes. Tonight’s listing is complete.
+    options:
+      - text: Nothing happens, because deletes must be pushed
+        explanation: The pull exists to catch exactly the deletes that were never pushed.
+      - text: The 300 recipes are marked missing, keep their tags for 30 days, and are hidden from lookups
+        correct: true
+        explanation: Right. 300 of 12,000 is 2.5%, well under the 20% guard. The rule does what it was designed for.
+      - text: The run is held, because items went missing
+        explanation: Only a change of more than 20% of the source’s items holds the run. 300 out of 12,000 is 2.5%.
+      - text: The 300 recipes and their tags are removed at once
+        explanation: Missing is a soft delete. Tags go only after 30 days, and only if the recipe hasn’t come back.
+  - prompt: While the photo gallery is being listed, a photo moves from one page to another, and Shelf sees it on both page 30 and page 31.
+    options:
+      - text: The listing is rejected, because the app sent a duplicate
+        explanation: The contract says duplicates are fine. What must never happen is a skipped item.
+      - text: Shelf stores the photo twice
+        explanation: An item is identified by (source id, item id), so there is only ever one row for it.
+      - text: Shelf ignores the repeat and carries on
+        correct: true
+        explanation: Right. The contract allows duplicates, because in a list that changes while it is read, the only way to promise “never skipped” is to allow “sometimes seen twice”.
+  - prompt: A recipe was unpublished by mistake, so last night’s complete listing left it out and Shelf marked it missing. Tonight it is back in the listing.
+    options:
+      - text: It comes back as a brand-new item without its tags
+        explanation: It would lose its tags only after 30 days away, and become a brand-new item only after 37. One night away is nowhere near that.
+      - text: It becomes present again, with all its tags
+        correct: true
+        explanation: Right. An item seen again within 30 days of going missing comes back with its tags intact. That’s why missing is a soft delete.
+      - text: It stays missing until the admin restores it
+        explanation: No admin is needed. The app’s listing is the truth about what exists, and tonight it says the recipe exists.

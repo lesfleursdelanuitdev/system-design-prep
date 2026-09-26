@@ -1,0 +1,64 @@
+id: u2-wishes-to-stories
+type: write
+title: From wishes to stories
+prompt: |
+  Here are three more wishes from Shelf’s brief. Rewrite each one as a user story (“As a …, I want …, so that …”) with two to four acceptance criteria. Give each story at least one criterion about what happens when something goes wrong or a rule is broken.
+
+  1. “Curators should be able to rename tags without breaking anything.”
+  2. “If an app deletes something by mistake, the tags shouldn’t be lost.”
+  3. “The admin should hear about it when the nightly pull goes wrong.”
+starter: |
+  1. Renaming tags
+  As a …, I want …, so that ….
+  -
+
+  2. Deleted by mistake
+  As a …, I want …, so that ….
+  -
+
+  3. When the nightly pull goes wrong
+  As a …, I want …, so that ….
+  -
+rows: 18
+hints:
+  - Start with who. A curator, an app or the admin?
+  - For the “so that”, ask who suffers if Shelf gets this wrong, and how.
+  - For each criterion, ask “how would I check this?” If the answer is “it depends”, add a number or a condition.
+  - For the rename, think about the apps that still ask for the tag by its old name.
+  - For the deleted item, decide how long Shelf waits before the tags really go.
+checklist:
+  - Each story names who wants it, what they want, and why
+  - Each story has at least two acceptance criteria
+  - Every criterion is a yes-or-no check that two people would agree on
+  - Each story has at least one criterion about a broken rule or something going wrong
+  - Numbers where they matter (30 days, 15 minutes), not “soon” or “a while”
+  - The stories say what Shelf must do, not how to build it (no tables, no technologies)
+modelAnswer: |
+  **1. Renaming tags**
+
+  As a **curator**, I want to rename a tag, so that I can fix a poor name without tagging every item again.
+
+  - Every item that had the tag still has it after the rename.
+  - For 30 days, lookups by the old name still find the tag.
+  - For those 30 days, nobody can create another tag with the old name in that scope.
+  - If the new name is already used in that scope (ignoring case), Shelf refuses with `tag_name_taken` and nothing changes.
+
+  **2. Deleted by mistake**
+
+  As a **curator**, I want an item that its app deletes to keep its tags for 30 days, so that an item deleted by mistake comes back with its tags.
+
+  - When an app deletes an item, Shelf marks it missing and keeps its tags.
+  - A missing item is hidden from lookups, unless the app asks for missing items too.
+  - If the app sends the item again within 30 days, it is present again with every tag it had.
+  - After 30 days missing, its tags are removed, and the removal is recorded in the audit log.
+
+  **3. When the nightly pull goes wrong**
+
+  As the **admin**, I want to know when a nightly pull fails or is held, so that I can fix it before tags go stale.
+
+  - An alert reaches the admin within 15 minutes of a failed or held pull.
+  - The alert names the source.
+  - A pull that fails part-way marks nothing missing.
+  - A dashboard shows when each source last had a good pull.
+
+  Yours will be worded differently. What matters is that each criterion could be checked by someone who wasn’t in the room when you wrote it.

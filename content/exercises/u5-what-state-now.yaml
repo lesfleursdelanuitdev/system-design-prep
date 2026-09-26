@@ -1,0 +1,45 @@
+id: u5-what-state-now
+type: sort
+title: What state is it in now?
+intro: "Each line describes what happened to one item. Which state is it in today? The rules: a delete, or absence from a complete listing, makes an item missing; 30 days missing makes it trashed; 7 more days makes it gone."
+buckets:
+  - id: present
+    label: Present
+    hint: Shown in lookups.
+  - id: missing
+    label: Missing
+    hint: Hidden, tags kept.
+  - id: trashed
+    label: Trashed
+    hint: Tags removed, row kept.
+  - id: gone
+    label: Gone
+    hint: Row deleted.
+items:
+  - text: The recipe site pushed a delete for it 3 days ago.
+    bucket: missing
+    reason: A delete marks the item missing straight away, and its tags stay. It has 27 days left to come back with them.
+  - text: The quiz app pushed a delete 40 days ago, and nothing since.
+    bucket: gone
+    reason: Trashed at 30 days, gone at 37. Day 40 is past both, so the retention job has deleted the row.
+  - text: It didn’t appear in last night’s listing of the photo gallery, but the listing failed on page 40 of 90.
+    bucket: present
+    reason: An incomplete listing marks nothing missing. Absence from a listing only counts when the listing finished.
+  - text: It was missing for 12 days, then the app pushed an upsert for it yesterday.
+    bucket: present
+    reason: Seen again within 30 days, so it is present again with all its tags intact.
+  - text: The recipe site pushed a delete 31 days ago, and nothing since.
+    bucket: trashed
+    reason: After 30 days missing, the hourly job has trashed it and removed its tags. The row stays until day 37.
+  - text: It didn’t appear in a complete listing that would have marked 30% of the gallery’s photos missing.
+    bucket: present
+    reason: Over the 20% guard, so Shelf held the run and alerted the admin. Nothing was marked missing.
+  - text: It was trashed 2 days ago, then appeared in last night’s complete listing.
+    bucket: present
+    reason: Seen again within the 7 trashed days, so it comes back as present. But its tags were removed when it was trashed, so it has none now.
+  - text: It didn’t appear in last night’s complete listing, along with 20 other photos out of 45,000.
+    bucket: missing
+    reason: A complete listing, and far under the 20% guard, so the absent items are marked missing. Their tags are kept.
+  - text: Its 30 days as missing ran out this morning, and then the retention job ran twice in the same minute.
+    bucket: trashed
+    reason: The first run trashed it. The second found nothing to do, because the item was no longer missing. Running twice changes nothing more.

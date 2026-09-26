@@ -1,0 +1,44 @@
+id: u4-dependency-direction
+type: quiz
+title: Which way should it point?
+questions:
+  - prompt: The quiz app wants each lookup result to include the quiz’s difficulty. What should Shelf do?
+    options:
+      - text: Add a `difficulty` column to items, filled from the quiz app’s pushes
+        explanation: Now Shelf stores quiz content (which its constraints forbid) and must change whenever the quiz app’s idea of difficulty does. The arrow points the wrong way.
+      - text: Add a `quizzes` module to Shelf that knows about difficulty
+        explanation: Tidier than a column, but Shelf still depends on one app’s details. The 20th app would want its own module too.
+      - text: Nothing. The quiz app owns difficulty, so it adds it to the results itself, or models levels as tags such as `beginner` in `/learning`
+        correct: true
+        explanation: Right. The quiz app depends on Shelf for tags and adds what it owns. Shelf stays general and knows nothing about quizzes.
+  - prompt: Every night Shelf calls each app’s list endpoint. Which way does the dependency really point?
+    options:
+      - text: From Shelf to each app, because Shelf makes the call
+        explanation: Calling usually means depending, but not here. Shelf wrote the contract, and it would be the apps that change if the contract changed.
+      - text: From each app to Shelf, because the app implements a contract Shelf defines
+        correct: true
+        explanation: Right. Shelf depends only on its own contract. Each app depends on Shelf’s rules for what a list page must look like.
+      - text: Both ways, so it is a circular dependency
+        explanation: The call goes one way and the knowledge goes the other, but only the knowledge counts. Shelf doesn’t need to know anything about any app beyond its own contract.
+  - prompt: When `catalog` trashes an item, its taggings must go too. `tagging` already calls `catalog`. What is the best design?
+    options:
+      - text: "`catalog` calls `tagging` to remove the item’s taggings"
+        explanation: Now each module calls the other, a circular dependency. Neither can be changed or tested on its own.
+      - text: "`catalog` deletes the rows from the `taggings` table itself"
+        explanation: No loop in the code, but `catalog` is writing another module’s data. The rules about taggings would now live in two places.
+      - text: "`catalog` offers an “item trashed” hook, and `tagging` registers a function with it that removes the taggings in the same transaction"
+        correct: true
+        explanation: Right. `catalog` runs whatever it was given without knowing what it does. The only arrow still points from `tagging` to `catalog`.
+      - text: "`tagging` checks every hour for trashed items and removes their taggings"
+        explanation: The arrow points the right way, but trashing and removing tags now happen at different times. An item that came back from trashed within the hour could keep tags it should have lost.
+  - prompt: Which of Shelf’s modules should depend on none of the others?
+    options:
+      - text: "`api`"
+        explanation: The opposite. `api` sits at the top and may call every module; what matters is that nothing depends on it.
+      - text: "`catalog`"
+        explanation: "`catalog` needs `sources` and `scopes`: to know a source exists and whether an item’s scope is allowed."
+      - text: "`scopes`"
+        correct: true
+        explanation: Right. The scope tree and its one rule (“is this scope inside that one?”) are the most general and stable part of Shelf, so they sit at the bottom and know nothing else.
+      - text: "`ops`"
+        explanation: "`ops` reads the other modules to report health and metrics, so it depends on them. It isn’t allowed to change their data, though."

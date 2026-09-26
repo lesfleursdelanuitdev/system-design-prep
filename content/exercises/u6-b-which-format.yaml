@@ -1,0 +1,60 @@
+id: u6-b-which-format
+type: quiz
+title: Which format for which job?
+questions:
+  - prompt: A new app, a book club, wants to plug into Shelf. Its team needs the list endpoint’s parameters, every response including the errors, and how Shelf proves who it is. What do you send them?
+    options:
+      - text: The OpenAPI document
+        correct: true
+        explanation: Right. OpenAPI describes the whole endpoint, including responses, errors and security, and the guarantees as text. It’s the one written for another team to read and build against.
+      - text: The JSON Schema for the response body
+        explanation: That tells them what a page looks like, but nothing about parameters, errors or authentication. It’s one part of what they need.
+      - text: The Zod schemas
+        explanation: Only useful if the book club writes TypeScript, and even then they would miss the prose around it. Zod is best inside your own code.
+  - prompt: Shelf’s `sync` module is written in TypeScript. The developer wants every page checked as it arrives, and wants the compiler to know what a page looks like. Which fits best?
+    options:
+      - text: OpenAPI
+        explanation: You could generate code from it, but on its own an OpenAPI file checks nothing at runtime and gives the compiler no types.
+      - text: Zod
+        correct: true
+        explanation: Right. One Zod schema checks the data while the program runs (`safeParse`) and gives a matching TypeScript type (`z.infer`).
+      - text: JSON Schema
+        explanation: It can check the data at runtime with a validator, but the TypeScript types would have to come from somewhere else. Zod gives both from one definition.
+  - prompt: The photo gallery isn’t written in TypeScript. Its team wants a check in their own test suite that every page they serve has the right shape. What’s the smallest thing that does the job?
+    options:
+      - text: Zod
+        explanation: Zod runs in JavaScript and TypeScript only. The gallery’s team would have to add a second language to their project.
+      - text: JSON Schema
+        correct: true
+        explanation: Right. Almost every language has a JSON Schema validator. The response schema is exactly the shape of a page, and nothing else.
+      - text: OpenAPI
+        explanation: It contains the same schema, so it would work, but they would have to dig the body schema out of it first. What they want is that schema on its own.
+  - prompt: Which of these rules for the list endpoint can **none** of the three formats check?
+    options:
+      - text: "`limit` is a whole number from 1 to 500"
+        explanation: "All three can: `minimum` and `maximum` in OpenAPI and JSON Schema, `.int().min(1).max(500)` in Zod."
+      - text: "`nextCursor` is text or `null`"
+        explanation: "All three can: a type of `[string, null]`, or `.nullable()` in Zod."
+      - text: A listing that reaches `nextCursor` of `null` contains every item
+        correct: true
+        explanation: Right. That is a behavioural guarantee about many requests over time, not the shape of one response. It lives in words, and contract tests check it.
+      - text: "`updatedAt` is a date and time"
+        explanation: "All three can: `format: date-time` or `z.iso.datetime()`."
+  - prompt: A team keeps OpenAPI, JSON Schema and Zod versions of one endpoint, each edited by hand. What is the likely result?
+    options:
+      - text: Nothing bad. Three copies mean three checks
+        explanation: They only check the same thing while they agree. Hand-kept copies drift, and then two of them are wrong.
+      - text: Sooner or later they disagree, and nobody knows which is right
+        correct: true
+        explanation: Right. Choose one as the source and generate the others from it.
+      - text: The OpenAPI file stops being valid
+        explanation: Each file can stay perfectly valid on its own. The problem is that they describe different contracts.
+  - prompt: "Why does the generated JSON Schema for the list response *not* say `\"additionalProperties\": false`?"
+    options:
+      - text: It was forgotten
+        explanation: It’s deliberate. The builder adds it to request bodies, which are strict, and leaves it off responses.
+      - text: So an app can add a field, such as `thumbnailUrl`, without breaking Shelf
+        correct: true
+        explanation: Right. Responses stay open and consumers ignore fields they don’t know. That’s what makes adding a field a safe change.
+      - text: JSON Schema doesn’t support it for arrays of objects
+        explanation: It does. You’ll find it on the push endpoint’s request body in the builder.

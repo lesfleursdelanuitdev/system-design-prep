@@ -1,0 +1,51 @@
+id: u11-can-a-schema-catch-it
+type: sort
+title: Can a schema catch it?
+intro: Each of these happens to a page from an app’s list endpoint. Shelf validates every page against the list page’s JSON Schema (with format checks switched on). Would that check catch it, does it need something else, or is it not a problem at all?
+buckets:
+  - id: schema
+    label: The schema check catches it
+    hint: A wrong shape, a missing field, a value out of range.
+  - id: other
+    label: Needs something else
+    hint: The shape is fine, but a promise about behaviour or meaning is broken.
+  - id: fine
+    label: Not a break
+    hint: The contract allows it.
+items:
+  - text: The recipe site renames `nextCursor` to `next_cursor`
+    bucket: schema
+    reason: "`nextCursor` is required. A page without it fails validation on page 1, before Shelf treats the listing as complete."
+  - text: The photo gallery’s listing quietly skips photos uploaded before 2020, then ends with `nextCursor` set to `null`
+    bucket: other
+    reason: Every page has a perfect shape. Completeness is a promise about behaviour; the 20% guard and the 30-day grace period are what protect the tags here.
+  - text: A new `thumbnail` field appears on every item
+    bucket: fine
+    reason: The schema allows extra fields on purpose. Adding a field is a backward-compatible change, and Shelf ignores what it doesn’t use.
+  - text: A page comes back with 800 items
+    bucket: schema
+    reason: "`items` has `maxItems: 500`. The page fails validation, so Shelf abandons the listing and marks nothing missing."
+  - text: A cursor stops working after 5 minutes, although the contract says at least an hour
+    bucket: other
+    reason: The cursor looks the same either way. Only a test that waits, or a failed pull, shows that it expired too soon.
+  - text: The quiz app sends `updatedAt` as “last Tuesday”
+    bucket: schema
+    reason: "`updatedAt` has `format: date-time`, so a validator with format checks switched on rejects it. (Without them, it would slip through: check your validator’s settings.)"
+  - text: The same recipe appears on page 2 and again on page 3
+    bucket: fine
+    reason: The contract says duplicates are fine. Shelf ignores repeats, so a listing that shows an item twice is still correct.
+  - text: The recipe site returns an item with scope `/photos`
+    bucket: other
+    reason: "`/photos` is a perfectly shaped path. Whether it’s inside the recipe site’s home scope depends on which source sent it, so Shelf’s own scope rule has to catch it, not the schema."
+  - text: An item id is 250 characters long
+    bucket: schema
+    reason: "`id` has `maxLength: 200`. The schema writes the rule from the contract (text, at most 200 characters) in a form a machine can check."
+  - text: Page 3 takes 14 s to arrive
+    bucket: other
+    reason: Timing is invisible to a schema. The pull’s 10 s timeout, and its retries, handle a slow page.
+  - text: A page leaves out `url` on every item
+    bucket: fine
+    reason: "`url` isn’t required. The contract allows an item without a link."
+  - text: A server error comes back as an HTML page with status 200
+    bucket: schema
+    reason: An HTML page isn’t a JSON object with `items` and `nextCursor`, so it fails at once. Without the check, Shelf might have tried to read it as an empty page.

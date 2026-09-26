@@ -1,0 +1,103 @@
+---
+unit: 3
+order: 3
+title: Identity
+summary: What makes an item that item. Stable keys, natural and surrogate keys, and what happens to tags when an app changes its ids.
+minutes: 9
+terms: [identity, key, stable-key, natural-key, surrogate-key, composite-key]
+---
+
+## In one sentence
+
+An item’s identity is whatever lets Shelf recognise it again next week, and for Shelf that is the pair of source id and the app’s own item id, which must never change and never be reused.
+
+## Example: is this the same quiz?
+
+On Monday the quiz app pushes a change to Shelf:
+
+```json
+{ "op": "upsert", "id": "q-1042", "title": "Fractions: part 1",
+  "url": "https://quiz.example/q/1042", "scope": "/learning/maths",
+  "updatedAt": "2026-03-02T09:00:00Z" }
+```
+
+A curator tags it `algebra` and `exam-prep`. On Friday the quiz app pushes again: same id, new title, “Fractions, part one”. Is it the same quiz?
+
+Yes, and Shelf knows because the id `q-1042` hasn’t changed. It updates the cached title, and both tags stay where they are.
+
+Now imagine Shelf had recognised quizzes by their title. Friday’s change would look like a quiz Shelf had never seen. The old one would stop appearing in the nightly listing, be marked missing, and lose its tags 30 days later. Nobody deleted anything. The quiz only got a better name.
+
+### Candidates for a key
+
+Several things could identify a quiz. Most fail one of two tests: *does it ever change?* and *could it ever point at something else?*
+
+| Candidate | Changes? | Could be reused? | Verdict |
+|---|---|---|---|
+| The title | Whenever someone edits it | Two quizzes can share a title | No |
+| The link | When the app reorganises its pages | Yes, after a page is deleted | No |
+| Its position in the app’s list | Every time a quiz is added | Yes | No |
+| The app’s own id, `q-1042` | Never, if the app promises | Never, if the app promises | Yes |
+
+The last row depends on a promise from the app, so the promise goes into the contract: **an item id is text, at most 200 characters, and it never changes and is never reused.** Text, because apps use numbers, random ids and readable slugs. At most 200 characters, so every id fits comfortably in Shelf’s indexes and URLs. Never reused, for a reason the story below shows.
+
+### Why a pair
+
+The recipe site has an item `1042`. So might the photo gallery. They are different things, so the item id alone isn’t enough. Shelf identifies an item by two values together: the source id and the item id, `recipes` + `1042`. You can see the pair in Shelf’s API paths, such as `/v1/items/{sourceId}/{itemId}/tags`.
+
+The source id is Shelf’s own choice, picked by the admin at registration: short, fixed and never reused. If the recipe site renames itself, its display name changes and its id stays `recipes`.
+
+### Tags work the other way round
+
+Shelf makes up its tag ids: `tag_4vn8x2`, random and meaningless. The name `vegetarian` is only an attribute. That’s what makes renaming safe. Every tagging points at `tag_4vn8x2`, so when a curator renames the tag to `veggie`, not one tagging has to change.
+
+### When keys change anyway
+
+The photo gallery moves to a new database, and every photo gets a new id. Photo `88` becomes `ph-5f3a9c`. If the gallery sends the new ids without warning, here is what Shelf sees:
+
+1. Pushes carry ids Shelf has never seen, so it creates new items with no tags.
+2. That night’s complete listing contains none of the 45,000 old ids, so every old item would be marked missing.
+3. That’s 100% of the gallery’s items, far over the 20% guard. Shelf holds the run and alerts the admin, instead of starting the 30-day clock on every tag the gallery has.
+
+The guard saved the tags, but the admin now has two copies of every photo, and the new ones have no tags. The better fix is on the gallery’s side: keep each photo’s old id in a column and go on sending it to Shelf, whatever the new database uses inside. The id you give other systems is a promise. The id your database happens to generate is a detail. Keep them apart and a database move stays invisible.
+
+<Callout type="story" title="The reused number">
+
+The photo gallery deletes photo `88`, a sunset tagged `favourite` and `beach`. A week later, after a restore from backup, the gallery’s id counter starts again from an old value, and a new photo of a birthday cake gets id `88`.
+
+Shelf sees `photos` + `88` come back within 30 days and does exactly what its rules say: the missing item is present again, with its tags intact. The birthday cake is now a `beach` photo. That’s why ids are never reused.
+
+</Callout>
+
+## The general idea
+
+<Term id="identity">Identity</Term> is what makes a thing *that* thing: you can tell it apart from everything else and recognise it again later, even after all its attributes have changed. A <Term id="key">key</Term> is the value that carries the identity.
+
+A good key is:
+
+- **Unique.** No two things share it.
+- **Stable.** It never changes for the life of the thing. This is a <Term id="stable-key">stable key</Term>.
+- **Never reused.** When the thing is gone, its key stays retired.
+- **Bounded.** Its type and maximum length are written down, so every system that stores it knows what to expect.
+
+Keys come in two kinds:
+
+- A <Term id="natural-key">natural key</Term> already exists in the world or in another system. The app’s item id is a natural key from Shelf’s point of view. Shelf didn’t make it, so it depends on the app’s promise that it is stable.
+- A <Term id="surrogate-key">surrogate key</Term> is made up by the system purely to identify. Shelf’s tag ids are surrogate keys. They mean nothing, so nothing about the tag can force them to change.
+
+When no single value is unique on its own, combine several. A key made of more than one value is a <Term id="composite-key">composite key</Term>: Shelf’s item key is (source id, item id).
+
+Identity is one of the hardest decisions to change later. Every tagging, every log line and three apps’ code refer to items by their key. Change the key and all of that must change with it, which is why [Design vs architecture](/learn/getting-oriented/design-vs-architecture/) counts it as architecture.
+
+<Callout type="tradeoff" title="Should Shelf give items its own ids too?">
+Shelf could give every item a surrogate id and keep a table mapping (source id, item id) to it, with taggings pointing at the surrogate. Then an app that renumbered its items would need only that mapping updated, not 300,000 taggings. The cost: one more table, one more lookup on every push, and the apps would still call Shelf with their own ids, so those must stay unique and stable anyway. Shelf keeps the natural pair because it is simpler and the contract already forbids changing ids. A system with less trustworthy sources might choose the other way.
+</Callout>
+
+## Common mistakes
+
+- **Using a description as a key.** Titles, names and links describe a thing, and descriptions change.
+- **Reusing ids.** A counter reset after a restore, or a number handed out again once it’s free, gives a new thing an old thing’s history.
+- **Forgetting half of the key.** An item id on its own collides across apps. Shelf’s key is always the pair.
+
+## Try it
+
+<Sort id="u3-good-key" />

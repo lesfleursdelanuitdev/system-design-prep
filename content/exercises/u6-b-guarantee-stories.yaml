@@ -1,0 +1,77 @@
+id: u6-b-guarantee-stories
+type: quiz
+title: Which promise was missing?
+intro: Six more things that went wrong around Shelf. For each, pick the behavioural guarantee that, written into the contract, would have prevented it or explained it.
+questions:
+  - prompt: |
+      The recipe site deletes a recipe and pushes the change. The network drops before the answer arrives. Nobody on the site’s team knows whether sending the delete again could do something odd, so they don’t. The recipe stays in lookups until the nightly pull.
+    options:
+      - text: Idempotency (safe to send twice?)
+        correct: true
+        explanation: Right. Shelf promises that repeating a batch leaves the same end state, and that the same `Idempotency-Key` within 24 hours replays the first answer. Knowing that, the site retries at once.
+      - text: Freshness
+        explanation: Freshness says how soon an *accepted* change shows up. Here the site doesn’t know whether it was accepted, and doesn’t dare ask again. That’s about repeats.
+      - text: Timeouts
+        explanation: Close. A timeout promise tells the site how long to wait. But the question that stopped them was “is a second send safe?”, which is idempotency.
+      - text: Ordering
+        explanation: Ordering matters when two *different* changes race. Here there is only one change, possibly sent twice.
+  - prompt: |
+      A curator removes `algebra` from a quiz, changes their mind and puts it straight back. The admin screen sends both requests without waiting, and the removal happens to reach Shelf last. The quiz ends up without the tag.
+    options:
+      - text: Idempotency
+        explanation: Tempting, since tagging and untagging are both idempotent. But idempotency is about the *same* request twice. These are two different requests racing.
+      - text: Ordering
+        correct: true
+        explanation: Right. Shelf’s contract says that when a tag and an untag of the same pair race, whichever Shelf receives last wins. Knowing that, the screen waits for the first answer before sending the second.
+      - text: Freshness
+        explanation: The final state is visible at once. The problem is *which* final state, which depends on order.
+      - text: Limits
+        explanation: Two requests are far below any limit.
+  - prompt: |
+      The photo gallery’s developer noticed that Shelf’s cursors looked like `p2`, `p3`, `p4`. To jump ahead, the gallery started building `p40` itself. After a Shelf update changed how cursors look, every one of those requests failed with `invalid_cursor`.
+    options:
+      - text: Limits
+        explanation: Page sizes are a limit, but the problem here is what the caller may do with a cursor.
+      - text: Timeouts
+        explanation: Nothing was slow. The requests were refused.
+      - text: Pagination
+        correct: true
+        explanation: Right. The pagination promise should say that a cursor is opaque. Send back the one you were given; never read it or build one. Then Shelf is free to change the format.
+      - text: Ordering
+        explanation: Lookups promise newest tag first, but that doesn’t let a caller invent cursors.
+  - prompt: |
+      After a bulk edit, the quiz app sends 800 changes in one push and gets `413 too_many_changes`. Its team files a bug against Shelf.
+    options:
+      - text: Limits
+        correct: true
+        explanation: Right. Shelf promises at most 500 changes and 1 MB per request. With that in the contract they would have split the batch into two requests from the start.
+      - text: Pagination
+        explanation: Pagination is for long lists coming back. The push endpoint isn’t a list; the size of what you *send* is a limit.
+      - text: Idempotency
+        explanation: Resending the same 800 changes would get the same `413`. The missing fact is how many are allowed.
+      - text: Freshness
+        explanation: None of the changes was accepted, so freshness doesn’t come into it.
+  - prompt: |
+      At lunchtime a teacher reports that a quiz renamed at 9am still has its old title in Shelf’s lookups. The quiz app forgot to push the change. Is it a bug?
+    options:
+      - text: Yes. Shelf promises every change within 5 s
+        explanation: Only *pushed* changes. This one was never pushed, so Shelf can’t know about it yet.
+      - text: No. It’s within the freshness promise for unpushed changes
+        correct: true
+        explanation: Right. An unpushed change shows up within 24 hours, after the nightly pull. The contract says so, which turns an argument into a quick answer. (The quiz app should still fix its missing push.)
+      - text: No. It’s an ordering problem
+        explanation: Ordering is about which of two changes wins. There is only one change here, and Shelf hasn’t seen it.
+      - text: Yes. It breaks the idempotency promise
+        explanation: Nothing was sent twice. Nothing was sent at all.
+  - prompt: |
+      The quiz app’s list endpoint gets slow: one page now takes 25 s. Every night Shelf gives up on that page, abandons the listing and marks nothing missing. The quiz app’s team has no idea anything is wrong.
+    options:
+      - text: Freshness
+        explanation: Stale data is the *result*. The cause is a page slower than Shelf will wait.
+      - text: Pagination
+        explanation: Paging works fine. One page is too slow.
+      - text: Timeouts
+        correct: true
+        explanation: Right. The list contract says each page must arrive within 10 s, and that Shelf retries three times, after 2, 4 and 8 s. A team that knows that can test their slowest page against it.
+      - text: Limits
+        explanation: Shelf could ask for smaller pages, but the promise that was broken is about time. Written down, it tells the team what to aim for.
