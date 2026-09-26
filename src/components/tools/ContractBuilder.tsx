@@ -44,16 +44,19 @@ export function ContractBuilder({
   value,
   onChange,
   compact = false,
+  initial = DEFAULT,
 }: {
   storageKey?: string;
   value?: Contract;
   onChange?: (c: Contract) => void;
   compact?: boolean;
+  /** What a new visitor starts with. Pass a module-level constant. */
+  initial?: Contract;
 }) {
-  const [saved, setSaved] = useStored<Contract>(storageKey, contractSchema, DEFAULT);
+  const [saved, setSaved] = useStored<Contract>(storageKey, contractSchema, initial);
   const hydrated = useHydrated();
   const controlled = value !== undefined && onChange !== undefined;
-  const c = controlled ? value : hydrated ? saved : DEFAULT;
+  const c = controlled ? value : hydrated ? saved : initial;
   const update = (fn: (c: Contract) => Contract) => {
     if (controlled) onChange(fn(structuredClone(c)));
     else setSaved((p) => fn(structuredClone(p)));
@@ -63,8 +66,8 @@ export function ContractBuilder({
   const uid = useId();
 
   return (
-    <div className="contract-builder not-prose my-6 text-[0.95rem]">
-      <div className={`grid gap-5 ${compact ? '' : '2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]'}`}>
+    <div className="contract-builder not-prose @container my-6 text-[0.95rem]">
+      <div className={`grid gap-5 ${compact ? '' : '@5xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]'}`}>
         <div className="min-w-0 space-y-4">
           <div className="card flex flex-wrap items-end gap-3 px-4 py-3">
             <div className="min-w-[14rem] flex-1">
@@ -252,7 +255,7 @@ export function ContractBuilder({
         </div>
 
         <div className="min-w-0">
-          <div className={compact ? '' : '2xl:sticky 2xl:top-[calc(var(--header-h)+1rem)]'}>
+          <div className={compact ? '' : '@5xl:sticky @5xl:top-[calc(var(--header-h)+1rem)]'}>
             <Output contract={c} warnings={warnings} />
           </div>
         </div>

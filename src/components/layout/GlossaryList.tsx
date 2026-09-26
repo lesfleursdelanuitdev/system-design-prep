@@ -47,7 +47,7 @@ export function GlossaryList({ items }: { items: Item[] }) {
           </p>
         )}
       </div>
-      <dl className="mt-2">
+      <div className="mt-2">
         {shown.map((i, n) => {
           const letter = letterOf(i.term);
           const first = !q && (n === 0 || letterOf(shown[n - 1].term) !== letter);
@@ -58,12 +58,12 @@ export function GlossaryList({ items }: { items: Item[] }) {
                   {letter}
                 </h2>
               ) : null}
-              <div id={i.id} className={`scroll-mt-40 rounded-lg px-3 py-3 ${target === i.id ? 'bg-accent-soft ring-1 ring-accent' : ''}`}>
-                <dt className="text-lg font-bold">
+              <article id={i.id} aria-labelledby={`${i.id}-t`} className={`scroll-mt-40 rounded-lg px-3 py-3 ${target === i.id ? 'bg-accent-soft ring-1 ring-accent' : ''}`}>
+                <h3 id={`${i.id}-t`} className="text-lg font-bold">
                   {i.term}
                   {i.aka.length ? <span className="ml-2 text-sm font-normal text-muted">also: {i.aka.join(', ')}</span> : null}
-                </dt>
-                <dd className="mt-1 leading-relaxed">
+                </h3>
+                <div className="mt-1 leading-relaxed">
                   <p>{i.short}</p>
                   {i.long ? <div className="mt-2 space-y-2 text-[0.95rem] text-fg/85 [&_code]:font-mono [&_code]:text-[0.88em] [&_ul]:list-disc [&_ul]:pl-5">{i.long}</div> : null}
                   {i.see.length ? (
@@ -72,19 +72,19 @@ export function GlossaryList({ items }: { items: Item[] }) {
                       {i.see.map((s, k) => (
                         <span key={s.id}>
                           {k ? ', ' : ''}
-                          <a href={`#${s.id}`} className="text-accent hover:underline" onClick={() => setQ('')}>
+                          <a href={`#${s.id}`} className="text-accent underline underline-offset-2" onClick={() => setQ('')}>
                             {s.term}
                           </a>
                         </span>
                       ))}
                     </p>
                   ) : null}
-                </dd>
-              </div>
+                </div>
+              </article>
             </div>
           );
         })}
-      </dl>
+      </div>
     </div>
   );
 }

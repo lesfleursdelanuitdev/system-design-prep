@@ -8,7 +8,7 @@ import { ExerciseShell, Rich } from '../exercises/Shell';
 import { IconAlert, IconCheck, IconInfo, IconReset } from '../icons';
 import { CopyButton } from './CopyButton';
 
-const partsSchema = z.object({
+export const scenarioStateSchema = z.object({
   source: z.string().max(500).default(''),
   stimulus: z.string().max(500).default(''),
   environment: z.string().max(500).default(''),
@@ -16,7 +16,7 @@ const partsSchema = z.object({
   measure: z.string().max(500).default(''),
   revealed: z.boolean().default(false),
 });
-type Saved = z.infer<typeof partsSchema>;
+type Saved = z.infer<typeof scenarioStateSchema>;
 
 export type ScenarioExerciseView = {
   id: string;
@@ -32,12 +32,21 @@ const ICON = { error: IconAlert, warn: IconAlert, tip: IconInfo };
 const TONE = { error: 'text-bad', warn: 'text-[var(--warn-ink)]', tip: 'text-muted' };
 
 /** Five fields with hints; flags a missing or unmeasurable measure. */
-export function ScenarioBuilder({ storageKey = 'tool:scenario', exercise }: { storageKey?: string; exercise?: ScenarioExerciseView }) {
-  const empty: Saved = useMemo(
-    () => ({ source: '', stimulus: '', environment: '', response: '', measure: '', ...(exercise?.starter ?? {}), revealed: false }),
-    [exercise?.starter],
-  );
-  const [saved, setSaved] = useStored<Saved>(storageKey, partsSchema, empty);
+export const EMPTY_SCENARIO: Saved = { source: '', stimulus: '', environment: '', response: '', measure: '', revealed: false };
+
+export function ScenarioBuilder({
+  storageKey = 'tool:scenario',
+  exercise,
+  title,
+  intro,
+}: {
+  storageKey?: string;
+  exercise?: ScenarioExerciseView;
+  title?: string;
+  intro?: ReactNode;
+}) {
+  const empty: Saved = useMemo(() => (exercise?.starter ? { ...EMPTY_SCENARIO, ...exercise.starter } : EMPTY_SCENARIO), [exercise?.starter]);
+  const [saved, setSaved] = useStored<Saved>(storageKey, scenarioStateSchema, empty);
   const hydrated = useHydrated();
   const v = hydrated ? saved : empty;
   const [touched, setTouched] = useState(false);
@@ -49,8 +58,8 @@ export function ScenarioBuilder({ storageKey = 'tool:scenario', exercise }: { st
   return (
     <ExerciseShell
       kind={exercise ? 'Build it' : 'Builder'}
-      title={exercise?.title ?? 'Quality-scenario builder'}
-      intro={exercise?.intro ?? <p>Describe one situation the system must handle well, in five parts. The measure must be a number someone could check.</p>}
+      title={exercise?.title ?? title ?? 'Quality-scenario builder'}
+      intro={exercise?.intro ?? intro ?? <p>Describe one situation the system must handle well, in five parts. The measure must be a number someone could check.</p>}
       id={exercise?.id}
       footer={
         <>

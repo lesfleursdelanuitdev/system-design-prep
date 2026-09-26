@@ -16,11 +16,8 @@ export type SearchDoc = {
 export type SearchHit = SearchDoc & { score: number; snippet: { before: string; match: string; after: string } | null };
 
 export function normalise(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[’']/g, '');
+  // Length-preserving, so positions found in the normalised text line up with the original.
+  return s.toLowerCase().replace(/[’'‘]/g, ' ');
 }
 
 export function tokenize(q: string): string[] {

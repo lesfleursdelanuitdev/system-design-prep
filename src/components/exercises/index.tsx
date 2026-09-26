@@ -20,13 +20,20 @@ const inline = (s: string) => renderInline(s, mdComponents);
 const block = (s: string) => renderMarkdown(s, mdComponents);
 const maybe = (s?: string) => (s ? block(s) : Promise.resolve(undefined));
 
+// The quiz already says "Right." or "Not quite." before an explanation, so drop a matching opener.
+const VERDICT = /^\s*(right|correct|yes|exactly|not quite|wrong|incorrect|no)[.!:,]\s*/i;
+const trimVerdict = (s: string) => {
+  const out = s.replace(VERDICT, '');
+  return out ? out.charAt(0).toUpperCase() + out.slice(1) : s;
+};
+
 export async function Quiz({ id }: { id: string }) {
   const ex = load(id, 'quiz');
   const questions = await Promise.all(
     ex.questions.map(async (q) => ({
       prompt: await block(q.prompt),
       options: await Promise.all(
-        q.options.map(async (o) => ({ text: await inline(o.text), correct: !!o.correct, explanation: await inline(o.explanation) })),
+        q.options.map(async (o) => ({ text: await inline(o.text), correct: !!o.correct, explanation: await inline(trimVerdict(o.explanation)) })),
       ),
     })),
   );
