@@ -1,0 +1,42 @@
+id: u6-b-safe-or-breaking
+type: sort
+title: Safe to ship, or breaking?
+intro: Here are 10 proposed changes to Shelf’s contracts. For each, decide whether apps already built against today’s contract would keep working without changing their code.
+buckets:
+  - id: safe
+    label: Safe to ship
+    hint: Existing callers won’t notice.
+  - id: breaking
+    label: Breaking
+    hint: Some existing, correct caller starts to fail or goes quietly wrong.
+items:
+  - text: Add an optional `thumbnailUrl` to each item in the list endpoint
+    bucket: safe
+    reason: Apps that don’t send it are still valid, and Shelf ignores it until it knows what to do with it. Each app adds it when it likes.
+  - text: Rename `title` to `name` in the list endpoint
+    bucket: breaking
+    reason: Every app sends `title` today. A rename is a removal plus an addition, so all three apps would have to change on the same day as Shelf.
+  - text: Lower the push limit from 500 to 200 changes per request
+    bucket: breaking
+    reason: An app that sends 300 changes, which worked yesterday, now gets `413 too_many_changes`. Tightening a limit on what you accept breaks callers.
+  - text: Add a `taggedBy` field to each item returned by tag lookups
+    bucket: safe
+    reason: Adding a field to a response is safe as long as consumers are tolerant readers and ignore fields they don’t know, which the contract asks them to be.
+  - text: Change `updatedAt` in the list endpoint to mean “when the item was first published”
+    bucket: breaking
+    reason: Nothing fails loudly, which makes it worse. Every page still looks valid, but Shelf would order changes by the wrong time. Repurposing a field is a breaking change.
+  - text: Add an optional query parameter to tag lookups that narrows results to one source
+    bucket: safe
+    reason: Callers that don’t send it get exactly what they got before. New optional inputs are safe.
+  - text: Make `url` required in the list endpoint
+    bucket: breaking
+    reason: Apps that leave `url` out, which the contract allowed, would suddenly send invalid pages. Making an optional input required breaks them.
+  - text: Reword the `message` of the `tag_out_of_scope` error
+    bucket: safe
+    reason: Callers branch on `code`, never on `message`, and the contract says so. Messages are for people and may change.
+  - text: Show missing items in lookups by default, unless the caller asks to hide them
+    bucket: breaking
+    reason: Every app that relied on lookups hiding missing items would start showing deleted recipes and photos. Changing a default changes what existing calls mean.
+  - text: Accept up to 1,000 changes per push instead of 500
+    bucket: safe
+    reason: Every request that worked before still works. Loosening a limit on what you accept is backward compatible (as long as Shelf can really cope with 1,000).

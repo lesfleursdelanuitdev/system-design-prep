@@ -1,0 +1,29 @@
+id: u2-push-500-scenario
+type: scenario
+title: An app pushes 500 changed items
+prompt: |
+  The recipe site has re-imported a batch of recipes. It sends Shelf 500 changed items in one request, the most a single push may carry. Write the quality scenario Shelf should meet.
+
+  Think about:
+
+  - what else is going on while the push arrives,
+  - what Shelf does with the 500 changes, and what it sends back,
+  - two things to measure: how long the push takes to answer, and how soon the changes show in lookups.
+starter:
+  source: The recipe site
+modelAnswer:
+  source: The recipe site
+  stimulus: pushes 500 changed items in one request
+  environment: during normal traffic (about 20 lookups a second)
+  response: Shelf applies every change in one transaction and answers with one result per change
+  measure: within 10 s, with all 500 changes visible in lookups within 5 s after that, for 95% of such batches
+notes: |
+  **Why these choices**
+
+  - **500 changes** is the most one push may carry, so this is the biggest normal request Shelf sees.
+  - **Normal traffic** matters, because the apps keep looking things up while the push is applied. This scenario goes with Shelf’s throughput target: it keeps answering 20 lookups a second during a 500-change push.
+  - **One transaction** means all or nothing. Either the whole batch is applied or none of it is, so a failure halfway never leaves half a batch behind.
+  - **One result per change** lets the app see what happened to each change, including one Shelf ignored because it already had a newer version.
+  - **The measure has two numbers:** how long the push takes to answer, and how soon the changes show in lookups. Both come with a share (95%), so one slow batch doesn’t break the requirement.
+
+  Your answer might pick a different environment, such as “while the nightly pull is running”. That’s a good scenario too, but a different one. Write each situation as its own scenario.

@@ -1,0 +1,48 @@
+id: u2-is-it-measurable
+type: sort
+title: Is this measurable?
+intro: Twelve statements someone might write in Shelf’s requirements. Could someone check each one with a number and get the same answer as you?
+buckets:
+  - id: measurable
+    label: Measurable
+    hint: Two people checking it would agree whether Shelf passes.
+  - id: not-measurable
+    label: Not measurable
+    hint: A wish. Each reader could decide for themselves whether it’s met.
+items:
+  - text: Lookups should be fast.
+    bucket: not-measurable
+    reason: No number, no share of requests, no load. The quiz app team and the admin would each read “fast” differently, and neither could prove the other wrong.
+  - text: 95% of lookups finish within 200 ms at 20 requests per second.
+    bucket: measurable
+    reason: A number (200 ms), a share (95%) and a load (20 requests per second). Two people measuring it get the same answer.
+  - text: Shelf must scale to handle growth.
+    bucket: not-measurable
+    reason: Scale to what, and at what cost? “Handles 500,000 items and 50 lookups a second on a bigger server” would be measurable.
+  - text: No tag change is lost once Shelf has said “OK”.
+    bucket: measurable
+    reason: It sounds absolute, but it’s a count that must be zero, and you can test it. Tag something, pull the plug the moment Shelf answers, restart, and check the tag is there.
+  - text: Lookups are usually under 200 ms.
+    bucket: not-measurable
+    reason: It has a number but hides the share. “Usually” could mean 51% or 99%. Name the percentile.
+  - text: The average lookup takes under 100 ms.
+    bucket: measurable
+    reason: Measurable, because anyone can work out an average. But it’s a weak requirement. One stuck request moves the average while most people see no change, and one lookup in 20 could take seconds while the average looks fine. Prefer a percentile.
+  - text: Pushed changes appear in lookups in real time.
+    bucket: not-measurable
+    reason: “Real time” sounds precise but has no number. “Within 5 s for 95% of batches” does.
+  - text: Shelf runs on one server for under $40 a month.
+    bucket: measurable
+    reason: A number and a unit, checked against the monthly bill.
+  - text: Shelf should be highly available.
+    bucket: not-measurable
+    reason: How high, and over what period? 99% and 99.99% a month differ by about seven hours of downtime.
+  - text: Every failed nightly pull alerts the admin within 15 minutes.
+    bucket: measurable
+    reason: What triggers it (a failed pull), what must happen (an alert to the admin) and a time limit. You can test it by breaking a pull on purpose.
+  - text: The admin screens should be user-friendly.
+    bucket: not-measurable
+    reason: Friendly to whom, by what test? “A new curator can tag ten items in under two minutes without help” could be checked.
+  - text: Lookups are available for 99.9% of each calendar month.
+    bucket: measurable
+    reason: A percentage and a period. At 99.9% that allows about 43 minutes of downtime a month, and anyone can add up the minutes.

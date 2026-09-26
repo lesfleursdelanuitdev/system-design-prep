@@ -1,0 +1,51 @@
+id: u2-which-wins
+type: quiz
+title: Constraint or goal, and which wins?
+intro: |
+  Shelf’s priorities, in order: (1) never lose or wrongly remove a tag, (2) lookups stay up, (3) freshness, (4) speed, (5) cost.
+questions:
+  - prompt: Which of these is a constraint rather than a goal?
+    options:
+      - text: 95% of lookups finish within 200 ms at 20 requests per second
+        explanation: A goal. You can beat it, miss it, or trade it against something else.
+      - text: Shelf has one developer
+        correct: true
+        explanation: Right. It’s a fact about Shelf’s world, not a target. You can’t do better than it; you design around it, for example by making every problem raise an alert.
+      - text: Pushed changes show in lookups within 5 s for 95% of batches
+        explanation: A freshness goal. It has a number to measure against, and it ranks third, so it can lose to a higher priority.
+  - prompt: Someone proposes a second server so that lookups can reach four nines. What’s the main problem?
+    options:
+      - text: Four nines is impossible
+        explanation: Big services reach it, with spare servers and people on call. The problem is Shelf’s own situation.
+      - text: It breaks a constraint. Shelf has one server, and one developer to run it
+        correct: true
+        explanation: Right. Constraints aren’t traded like goals. Going past one means asking whoever set it to change it, which is a different conversation from a design choice.
+      - text: Lookups staying up is only priority 2
+        explanation: Priorities settle conflicts between goals. This idea runs into a fixed fact before any priority comes into it.
+  - prompt: A complete nightly listing from the recipe site would mark 3,000 of its 12,000 recipes missing. What should Shelf do?
+    options:
+      - text: Mark them missing. The listing finished, so it must be right
+        explanation: Finishing is needed, but it isn’t enough. A quarter of the site vanishing overnight looks more like a bug in the listing than a real clear-out.
+      - text: Hold the run and alert the admin
+        correct: true
+        explanation: Right. 25% is over the 20% guard. Wrongly removing tags breaks priority 1, so Shelf asks a person before doing something this big. The cost is some of the admin’s time.
+      - text: Mark nothing missing and say nothing
+        explanation: Safe for the tags, but real deletions would never be applied, and nobody would know why. The admin needs to hear about it.
+  - prompt: A developer suggests answering “OK” to a tagging request before the database has saved it. Tagging would get 30 ms faster. What do Shelf’s priorities say?
+    options:
+      - text: Do it. Speed is one of Shelf’s requirements
+        explanation: Speed is priority 4. If the server crashes between the “OK” and the save, a tag Shelf promised is lost, which breaks priority 1.
+      - text: Don’t. Never losing a tag (priority 1) beats speed (priority 4)
+        correct: true
+        explanation: Right. It would also break Shelf’s durability requirement, that no tag change is lost once Shelf has said “OK”.
+      - text: Do it, but only at the busiest times
+        explanation: The busiest times are when a crash would lose the most unsaved tags. Durability doesn’t switch off when Shelf is busy.
+  - prompt: During a traffic spike above 20 lookups a second, Shelf answers tag lookups from a copy up to 30 s old. The recipe site pushed a new title 10 s ago, and lookups still show the old one. What is this?
+    options:
+      - text: A bug. Pushed changes must show within 5 s
+        explanation: The 5 s target holds for 95% of batches in normal running. During a spike, Shelf deliberately gives up some freshness.
+      - text: The planned trade-off. Keeping lookups up (priority 2) beats freshness (priority 3)
+        correct: true
+        explanation: Right. A slightly old answer is better than no answer. The new title shows within 30 s.
+      - text: A durability failure
+        explanation: Nothing was lost. The new title is saved; lookups are showing an older copy for a few seconds. That’s freshness, not durability.

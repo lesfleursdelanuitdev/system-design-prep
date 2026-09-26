@@ -93,6 +93,8 @@ describe('JSON Schema output', () => {
     expect(v({ changes: [{ op: 'upsert', id: 'r-1', title: 'Soup', updatedAt: '2026-05-01T10:00:00Z' }] })).toBe(true);
     expect(v({ changes: [{ op: 'rename', id: 'r-1', updatedAt: '2026-05-01T10:00:00Z' }] })).toBe(false);
     expect(v({ changes: [], extra: true })).toBe(false);
+    // Unknown fields are rejected inside each change too, so a typo like "titel" is caught.
+    expect(v({ changes: [{ op: 'upsert', id: 'r-1', titel: 'Soup', updatedAt: '2026-05-01T10:00:00Z' }] })).toBe(false);
     expect(v({ changes: [{ op: 'delete', id: 'r-1', updatedAt: 'yesterday' }] })).toBe(false);
   });
   it('describes the error body with the listed codes', () => {
@@ -125,6 +127,10 @@ describe('Zod output', () => {
     const ok = { changes: [{ op: 'delete', id: 'r-9', updatedAt: '2026-05-01T10:00:00Z' }] };
     expect(zs.SendChangesRequest.safeParse(ok).success).toBe(true);
     expect(zs.SendChangesRequest.safeParse({ ...ok, extra: 1 }).success).toBe(false);
+    expect(zs.SendChangesRequest.safeParse({ changes: [{ ...ok.changes[0], titel: 'Soup' }] }).success).toBe(false);
+    // Responses stay tolerant, nested objects included.
+    const res = { accepted: 1, results: [{ id: 'r-9', status: 'missing', ignored: false, extra: 'fine' }] };
+    expect(zs.SendChangesResponse.safeParse(res).success).toBe(true);
     expect(zs.SendChangesRequest.safeParse({ changes: [{ op: 'nope', id: 'r', updatedAt: '2026-05-01T10:00:00Z' }] }).success).toBe(false);
     expect(zs.SendChangesParams.safeParse({ sourceId: 'recipes', 'Idempotency-Key': 'abc' }).success).toBe(true);
   });

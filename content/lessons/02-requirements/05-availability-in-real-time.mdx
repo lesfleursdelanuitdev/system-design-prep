@@ -1,0 +1,104 @@
+---
+unit: 2
+order: 5
+title: Availability in real time
+summary: What 99%, 99.9% and 99.99% mean in minutes of downtime a month, and why a chain of parts is less available than any one part in it.
+minutes: 9
+terms: [availability, downtime, nines, slo]
+---
+
+## In one sentence
+
+An availability percentage is a budget of downtime: 99.9% allows about 43 minutes a month, and each extra nine divides that budget by ten.
+
+## Example: Shelf’s 43 minutes
+
+Shelf promises that lookups are available 99.9% of each month. That sounds like “almost always”. Turned into time, it gets concrete.
+
+An average month has about 43,830 minutes. 0.1% of that is about 43.8 minutes, or 43 min 50 s. That’s the whole month’s allowance for downtime, and everything counts against it:
+
+- **Deploys.** If each deploy takes lookups down for 2 minutes, and the admin deploys twice a week, that’s about 17 minutes a month.
+- **Maintenance.** Restarting the server for security updates: say 5 minutes.
+- **Accidents.** Whatever is left, about 20 minutes, is all there is for things going wrong.
+
+Now picture a Friday evening. A release goes out with a bug that makes every lookup fail. An alert fires. The admin, Shelf’s only developer, takes 10 minutes to see it and 15 more to roll back. That one evening cost 25 minutes, more than the month had left.
+
+So 99.9% quietly forces other decisions. Deploys must be quick. Alerts must reach the admin fast. Rolling back must take minutes, not an hour. A single percentage ends up shaping how Shelf is released and run.
+
+The admin screens promise only 99%, which is about 7 h 18 min a month. A broken admin screen at 2am can wait until morning. That’s the point of the lower number.
+
+### The nines
+
+| Availability | Called | Downtime a day | Downtime a month | Downtime a year |
+|---|---|---|---|---|
+| 99% | two nines | 14 min 24 s | 7 h 18 min | 3 days 16 h |
+| 99.9% | three nines | 1 min 26 s | 43 min 50 s | 8 h 46 min |
+| 99.99% | four nines | 8.6 s | 4 min 23 s | 52 min 36 s |
+
+A month here is an average month of about 30.4 days. A 31-day month allows a little more, and February a little less.
+
+Each extra nine allows ten times less downtime. At four nines, the month’s budget is shorter than the time it takes a person to notice an alert and log in. No human can fix an outage that fast. Only a second server that takes over by itself can.
+
+<Callout type="tradeoff" title="Why Shelf stops at three nines">
+Four nines for lookups would mean at least two servers, switching between them automatically, and a second copy of the database kept up to date. Shelf has one server, one developer and a budget under $40 a month. Three nines is what that setup can honestly promise, and it’s enough for apps that show tags beside recipes and photos.
+</Callout>
+
+### Parts in a row
+
+A lookup needs several things working at once: the server, Shelf’s own program and Postgres. If any one of them is down, the lookup fails.
+
+<Diagram
+  title="A lookup needs every part"
+  description="A lookup from an app passes through three parts in a row: the server, Shelf's program and the Postgres database. Each is labelled 99.9% available. Because the lookup fails if any one of them is down, the whole chain is only about 99.7% available."
+>
+```mermaid
+flowchart LR
+  app([An app]) --> server["Server: 99.9%"]
+  server --> shelf["Shelf's program: 99.9%"]
+  shelf --> db["Postgres: 99.9%"]
+  db -.- total["Together: about 99.7%"]
+```
+</Diagram>
+
+When every part must be up, their availabilities multiply:
+
+- **Two parts at 99.9%:** 0.999 × 0.999 ≈ 0.998, so about 99.8%. That allows about 1 h 28 min of downtime a month, twice the budget.
+- **Three parts at 99.9%:** about 99.7%, or about 2 h 11 min a month.
+
+A chain is always weaker than its weakest part. To promise 99.9% for the whole lookup, each part has to do better than 99.9%. That’s one reason Shelf keeps the path of a lookup short: every extra service a lookup depends on eats into the same 43 minutes.
+
+## The general idea
+
+<Term id="availability">Availability</Term> is the share of time a system is working for the people using it. The time it isn’t is <Term id="downtime">downtime</Term>. People describe availability in <Term id="nines">nines</Term>: 99.9% is “three nines”.
+
+Three habits make an availability target useful:
+
+1. **Turn the percentage into time.** “43 minutes a month” is something you can plan with. “99.9%” isn’t, until you convert it.
+2. **Say over what period, and what counts.** A calendar month is common. For Shelf, planned downtime counts: an app can’t tell a deploy from a crash.
+3. **Multiply along the chain.** Everything a request needs, one after another, multiplies. Adding a dependency always lowers availability, unless it has a spare ready to take over.
+
+Shelf watches its lookups against an <Term id="slo">SLO</Term>, a target for how well the service is doing: 99.9% of lookups answered successfully within 500 ms each month. When the month’s budget starts running out too fast, the admin gets an alert. You’ll meet SLOs properly in [Knowing it’s healthy](/learn/when-things-go-wrong/knowing-its-healthy/).
+
+<GoDeeper title="Counting minutes or counting requests">
+
+There are two ways to measure availability. **Time-based:** out of every minute in the month, how many was Shelf up? **Request-based:** out of every lookup in the month, how many were answered well? Shelf’s SLO is request-based, and it counts a lookup slower than 500 ms as a failure too.
+
+Request-based measures what users felt. An outage at 4am, when few people are browsing, costs less than one at 6pm. Time-based is simpler to explain and to promise in an agreement.
+
+The multiplication rule assumes parts fail independently. Parts on the same server often fail together (when the server goes, everything on it goes), so the real figure can differ. It’s still the right first estimate.
+
+</GoDeeper>
+
+## Common mistakes
+
+- **Treating the percentage as the goal.** 99.9% only means something once you’ve worked out the 43 minutes and asked whether deploys, maintenance and one bad evening fit inside them.
+- **Promising more nines than the parts allow.** Two parts at 99.9% can’t make a 99.9% whole.
+- **Forgetting planned downtime.** A 5-minute deploy every day adds up to about 2 h 30 min a month, more than three times Shelf’s whole budget.
+
+## Try it
+
+Pick a percentage and see what it allows. Then try “Parts in a row” with two or three parts.
+
+<AvailabilityCalculator />
+
+<Quiz id="u2-nines" />

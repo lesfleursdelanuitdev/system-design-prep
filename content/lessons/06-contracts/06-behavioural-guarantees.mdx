@@ -1,0 +1,115 @@
+---
+unit: 6
+order: 6
+title: "Step 5: behavioural guarantees"
+summary: Promises about what an endpoint does when requests repeat, race, lag, come in pages, pile up or run slow. One short Shelf story for each shows what goes wrong without it.
+minutes: 9
+terms: [behavioural-guarantee, idempotency, ordering, pagination, rate-limit, timeout]
+---
+
+## In one sentence
+
+A behavioural guarantee is a promise about what an endpoint does when real life gets messy: when a request arrives twice, out of order, late, in pages, in bulk or slowly.
+
+## Example: six promises Shelf makes
+
+After the first four steps, Shelf’s push endpoint, `POST /v1/sources/{sourceId}/changes`, has an owner, nouns, inputs and outputs, and a list of errors. Two developers could build both sides from that and still disagree about what happens on a bad day.
+
+Each section below starts with a short story from a version of Shelf whose contract left one promise out. Then it shows the promise Shelf makes instead.
+
+### Safe to send twice?
+
+<Callout type="story" title="The tag that wouldn’t come off">
+
+In an early draft, tagging was `POST /v1/taggings`, and every call added a row. A curator double-clicked “Add tag” on a lentil soup recipe. The soup now had `vegetarian` twice and appeared twice in the lookup. The curator removed the tag, and the soup still showed as vegetarian.
+
+</Callout>
+
+Shelf’s contract says instead: tagging is `PUT /v1/items/{sourceId}/{itemId}/tags/{tagId}`, and doing it twice leaves one tag. The second call answers `created: false`.
+
+Pushing changes is safe to repeat too. The same batch sent again leaves the same end state. If the app sends the same `Idempotency-Key` header within 24 hours, Shelf replays its first answer and applies nothing again.
+
+This matters because a caller often can’t tell whether a request worked. The network can drop the answer after Shelf has done the work. A caller that knows a repeat is harmless can retry without fear.
+
+### Ordering
+
+<Callout type="story" title="The title that went backwards">
+
+The recipe site renamed “Lentil soup” to “Red lentil soup”, then 2 s later to “Spicy red lentil soup”. Two workers pushed the two changes, and the newer one happened to arrive first. Shelf applied both in the order they arrived. Lookups showed the older title until that night’s pull put it right.
+
+</Callout>
+
+Shelf’s promise: every change carries `updatedAt`, the time it happened in the app. A change older than the version Shelf already has is ignored, and its result says `ignored: true`. Within one request, changes are applied in the order sent. So the newest version wins, whatever order the network delivers them in.
+
+### Freshness
+
+<Callout type="story" title="The bug that wasn’t">
+
+The photo gallery removed a photo and pushed the delete. Its admin page then asked Shelf for photos tagged `favourite`, and the photo was still there. A developer spent an afternoon hunting the bug. There wasn’t one: the change showed up 2 s later. Nobody had said how long it could take.
+
+</Callout>
+
+Shelf’s promise: an accepted change shows up in lookups within 5 s for 95% of batches. A change that was never pushed shows up within 24 hours, after the nightly pull. With that written down, the gallery can design around it, for example by removing the photo from its own page straight away instead of asking Shelf again.
+
+### Pagination
+
+<Callout type="story" title="The missing 240 quizzes">
+
+The quiz app asked Shelf for quizzes tagged `exam-prep` and showed “100 quizzes to help you revise”. There were 340. The response had a `nextCursor` field, but nothing said that lists come in pages, or how to tell the last one.
+
+</Callout>
+
+Shelf’s promise: lookups come in pages of up to 100, newest tag first. Keep calling with the `nextCursor` from each page until it is `null`, which means you have seen everything. The cursor is opaque: send it back as it is, and never read it or build one yourself.
+
+### Limits
+
+<Callout type="story" title="The import that slowed everyone down">
+
+After moving to a new database, the photo gallery pushed all 45,000 photos in one request. Shelf tried to apply them in one transaction. For over a minute, lookups from every app queued behind it, and the recipe site’s pages hung.
+
+</Callout>
+
+Shelf’s promise: at most 500 changes and 1 MB per request, and 60 requests a minute per key. Past those, Shelf applies nothing and answers `413 too_many_changes` or `429 rate_limited`, with a `Retry-After` header saying how long to wait. Now the gallery knows to send 90 batches of 500, which takes about a minute and a half at the allowed rate.
+
+### Timeouts
+
+<Callout type="story" title="The batch that was sent six times">
+
+The recipe site’s HTTP library gave up after 2 s by default. A batch of 500 changes took Shelf 3 s. So every large batch “failed”, and the site retried it five times. Shelf applied it every time (harmlessly, because pushes are safe to repeat), but the site’s team spent a week convinced that Shelf was down.
+
+</Callout>
+
+Shelf’s promise: it answers a push within 10 s. Wait at least that long. If you still time out, retry with the same `Idempotency-Key`. The nightly pull has the mirror-image rule for the apps. Each page of their listing must arrive within 10 s, and Shelf retries a slow page three times, after 2, 4 and 8 s.
+
+## The general idea
+
+The shapes of requests and responses say *what* is exchanged. A <Term id="behavioural-guarantee">behavioural guarantee</Term> says how the exchange behaves over time: when things repeat, race, lag, pile up or stall. Six questions cover most of it.
+
+| Guarantee | The question it answers | Shelf’s push endpoint |
+|---|---|---|
+| <Term id="idempotency">Idempotency</Term> | Is it safe to send twice? | Yes. The same key within 24 hours replays the first answer. |
+| <Term id="ordering">Ordering</Term> | If changes race, which one wins? | The newest `updatedAt`. Within a request, the order sent. |
+| <Term id="freshness">Freshness</Term> | How old can what I read be? | Pushed changes show within 5 s (p95). |
+| <Term id="pagination">Pagination</Term> | How do I get all of a long list? | Not a list. Split big batches into requests of 500. |
+| Limits | How much, how often? | 500 changes and 1 MB per request. A <Term id="rate-limit">rate limit</Term> of 60 a minute. |
+| <Term id="timeout">Timeouts</Term> | How long may it take, and then what? | Within 10 s. Then retry with the same key. |
+
+These are the six guarantee boxes in the contract builder you’ll use in [Step 8](/learn/contracts/write-it-down-for-machines/). It warns you about each one you leave blank.
+
+Guarantees deserve their own step for three reasons:
+
+- **They are invisible in the shapes.** Two endpoints with identical JSON can behave in completely different ways when a request is repeated.
+- **Callers design around them.** Each caller chooses its timeout, its retry policy and its caching from what the contract promises. A missing promise means every caller guesses, and each guesses differently.
+- **They lean on each other.** Retrying after a timeout is only safe because pushes are idempotent. Ordering by `updatedAt` is what lets a push and the nightly pull disagree for a while without harm.
+
+A rough rule for idempotency: reads are safe to repeat by nature, and writes need a decision. A `PUT` or `DELETE` on a fixed address can be designed so that doing it twice changes nothing more. A `POST` usually needs an <Term id="idempotency-key">idempotency key</Term>, or a body that describes an end state (“this item now has this title”) rather than a step (“add one”).
+
+## Common mistakes
+
+- **Leaving guarantees out because “it’s obvious”.** It is obvious to whoever wrote the code. The other team will guess, and the stories above show what guessing costs.
+- **Promising more than you can keep.** “Every change is visible instantly” or “each request is handled exactly once” sound great, but a network can always lose an answer. Promise “safe to retry” and a measured freshness target instead.
+- **Stating a limit without its other half.** “At most 500 changes” also needs what happens past it: Shelf answers `413 too_many_changes` and applies nothing.
+
+## Try it
+
+<Quiz id="u6-b-guarantee-stories" />

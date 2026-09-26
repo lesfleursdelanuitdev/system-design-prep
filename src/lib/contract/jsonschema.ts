@@ -3,7 +3,8 @@ import { hasBody, type Contract, type Field, type ScalarField } from './model';
 
 type Schema = Record<string, unknown>;
 
-export function fieldToSchema(f: Field | ScalarField): Schema {
+/** `closed`: forbid unknown properties in nested objects too (used for request bodies). */
+export function fieldToSchema(f: Field | ScalarField, closed = false): Schema {
   let s: Schema;
   switch (f.type) {
     case 'string':
@@ -34,7 +35,7 @@ export function fieldToSchema(f: Field | ScalarField): Schema {
     }
     case 'object[]': {
       const children = 'fields' in f && f.fields ? f.fields : [];
-      s = { type: 'array', items: objectSchema(children, false) };
+      s = { type: 'array', items: objectSchema(children, closed) };
       if (f.maxItems !== undefined) s.maxItems = f.maxItems;
       break;
     }
@@ -56,7 +57,7 @@ export function objectSchema(fields: (Field | ScalarField)[], closed: boolean): 
   const required: string[] = [];
   for (const f of fields) {
     if (!f.name) continue;
-    properties[f.name] = fieldToSchema(f);
+    properties[f.name] = fieldToSchema(f, closed);
     if (f.required) required.push(f.name);
   }
   const s: Schema = { type: 'object', properties };

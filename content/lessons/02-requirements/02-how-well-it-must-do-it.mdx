@@ -1,0 +1,81 @@
+---
+unit: 2
+order: 2
+title: How well it must do it
+summary: Non-functional requirements say how well the system must work. Eleven quality attributes, from latency to cost, each with a plain meaning and a Shelf target.
+minutes: 8
+terms: [non-functional-requirement, quality-attribute, latency, throughput, availability, durability]
+---
+
+## In one sentence
+
+A non-functional requirement says how well the system must do its job (how fast, how reliably, how cheaply), and each one is about a single quality you can measure.
+
+## Example: two Shelfs that do the same thing
+
+Imagine two versions of Shelf. Both pass every story from [the last lesson](/learn/requirements/what-it-must-do/): curators can tag items, apps can look them up, and deleted items keep their tags.
+
+<Compare>
+<Side title="Shelf A" tone="good">
+Lookups come back in about 100 ms, even at lunchtime. It was down for 20 minutes last month. When its disk failed, it was back within an hour and had lost nothing.
+</Side>
+<Side title="Shelf B" tone="bad">
+Lookups take 4 s at lunchtime. It falls over twice a week. When its disk failed, it took 2 days to rebuild, and a week of tagging was gone.
+</Side>
+</Compare>
+
+Nobody would call Shelf B finished, yet it does everything the stories ask. What it fails at is how *well* it does them. Those are the non-functional requirements. If they aren’t written down as carefully as the stories, you can end up with Shelf B and no way to prove it’s wrong.
+
+### Shelf’s quality attributes
+
+Here are the eleven qualities this course uses. Each has a meaning in plain English and the target Shelf sets for it.
+
+| Quality | In plain English | Shelf’s target |
+|---|---|---|
+| <Term id="latency">Latency</Term> | How long one request takes. | 95% of lookups finish within 200 ms and 99% within 500 ms, at 20 requests per second. |
+| <Term id="throughput">Throughput</Term> | How much work it gets through each second. | Keeps answering 20 lookups a second while it applies a push of 500 changes. |
+| <Term id="availability">Availability</Term> | How much of the time it’s up and answering. | Lookups: 99.9% of each calendar month (about 43 minutes of downtime). Admin screens: 99%. |
+| <Term id="durability">Durability</Term> | Once it says “saved”, it stays saved. | No tag change is lost once Shelf has said “OK”. |
+| <Term id="recovery">Recovery</Term> | How it comes back after a disaster, and what’s lost. | After losing the server: back within 2 hours, losing at most 15 minutes of tag changes. |
+| <Term id="freshness">Freshness</Term> | How up to date the data it shows is. | A pushed change shows in lookups within 5 s for 95% of batches. An unpushed one shows within 24 hours. |
+| <Term id="scalability">Scalability</Term> | What it takes to cope with more. | Handles 500,000 items and 50 lookups a second by moving to a bigger server, with no redesign. |
+| <Term id="security-attribute">Security</Term> | Only the right callers can see and change things. | Every call needs a key. A key sees only its own scope. Keys are stored <Term id="hashing">hashed</Term>. |
+| <Term id="maintainability">Maintainability</Term> | How safely and cheaply it can be changed. | A new app plugs in by registration alone, with no change to Shelf’s code. |
+| <Term id="operability">Operability</Term> | How well the person running it can spot problems and fix them. | Every failed pull alerts the admin within 15 minutes. A dashboard shows each source’s last good pull. |
+| <Term id="cost">Cost</Term> | What it takes to run, in money and time. | Runs on one server for under $40 a month. |
+
+### Neighbours that get mixed up
+
+**Latency and throughput.** Latency is how long one customer waits at the till. Throughput is how many customers the shop serves in an hour. Opening a second till doubles throughput without making anyone’s wait shorter. Shelf needs both: each lookup quick, and 20 of them a second.
+
+**Availability, durability and recovery.** Availability is whether Shelf answers right now. Durability is whether what it saved is still there. They fail separately. If Shelf’s program crashes, lookups are down but nothing is lost. If a faulty disk quietly drops the last hour of writes, Shelf can stay up while tags vanish. Recovery is the plan for the worst case, when the whole server is lost. It has two numbers: how long until Shelf is back (the <Term id="rto">RTO</Term>) and how much recent work may be lost (the <Term id="rpo">RPO</Term>).
+
+**Freshness and latency.** A lookup can come back in 50 ms and still show a recipe title from last week. Freshness is about how old the answer is, not how long it took to arrive.
+
+## The general idea
+
+A <Term id="non-functional-requirement">non-functional requirement</Term> says how well a system must do what its stories describe. Each one is about one <Term id="quality-attribute">quality attribute</Term>: a way the system can be good or bad apart from what it does. They are also called quality requirements, which is the better name. “Non-functional” makes them sound optional, and they aren’t.
+
+They shape a design more than the stories do. You could build Shelf’s stories a hundred ways. The quality targets rule most of those out:
+
+- “Losing at most 15 minutes of tag changes” means a nightly backup isn’t enough on its own. Shelf also copies its database log off the server every 15 minutes.
+- “A new app plugs in by registration alone” means Shelf can’t contain any code that knows about recipes or photos.
+- “Under $40 a month” means one server, not a cluster.
+
+Qualities also compete. Fresher data costs more work. More nines cost more servers. Tighter security adds a step for every caller. You can’t have the maximum of all eleven, so each target should be as high as it needs to be, and no higher.
+
+<Callout type="tradeoff" title="Different parts, different targets">
+Shelf promises 99.9% for lookups and only 99% for the admin screens: about 43 minutes of downtime a month against about 7 hours. An admin screen that breaks at 2am can wait until morning; the apps can’t. One target for everything would either overspend on screens one person uses, or under-protect the lookups every app depends on.
+</Callout>
+
+Every target in the table is written so that someone can check it. The next lesson, [Making a requirement measurable](/learn/requirements/making-it-measurable/), shows how to get there from a vague wish.
+
+## Common mistakes
+
+- **Leaving them out.** The stories feel complete, so nobody writes down how fast or how reliable. Then “fast enough” gets decided by whoever complains loudest.
+- **Asking for the best of everything.** “Always up, instant and cheap” can’t be built. Say how much of each is enough.
+- **Mixing up neighbours.** A fast system can serve stale data, and a system that never goes down can still lose what it saved. Name the quality you mean.
+
+## Try it
+
+<Quiz id="u2-which-attribute" />

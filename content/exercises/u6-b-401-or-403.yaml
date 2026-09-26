@@ -1,0 +1,75 @@
+id: u6-b-401-or-403
+type: quiz
+title: What does Shelf answer?
+intro: |
+  For each request, decide what Shelf sends back. The roles, from Shelf’s contract:
+
+  | Role | Privileges |
+  |---|---|
+  | App | `items:push` (its own source), `tags:read`, `tags:apply` in its home scope |
+  | Read-only app | `tags:read` in a scope |
+  | Curator | `tags:read`, `tags:apply`, `tags:manage` in a scope |
+  | Admin | everything, in `/` |
+
+  Tags used below: `vegetarian` lives in `/food`, `exam-prep` in `/learning`, `algebra` in `/learning/maths`.
+questions:
+  - prompt: The recipe site’s key (App role, scope `/food`) puts `vegetarian` on one of its recipes.
+    options:
+      - text: "`200`: the recipe has the tag"
+        correct: true
+        explanation: Right. The key has `tags:apply`, and both the recipe and `vegetarian` are inside `/food`. The tag fits the item too.
+      - text: "`403 forbidden`"
+        explanation: Nothing is missing. The privilege is there and both the tag and the item are in the key’s scope.
+      - text: "`422 tag_out_of_scope`"
+        explanation: "`vegetarian` is defined in `/food`, and recipes live in `/food`, so the tag fits."
+  - prompt: A curator’s key has scope `/learning/maths`. The curator tries to put `exam-prep` on a maths quiz.
+    options:
+      - text: "`200`: the quiz has the tag"
+        explanation: "The tag would fit the quiz (`/learning` contains `/learning/maths`), but the key has to reach the tag too, and `/learning` is above this key’s scope."
+      - text: "`403 forbidden`"
+        correct: true
+        explanation: Right. Tagging needs both the item and the tag inside the key’s scope. This key covers `/learning/maths` only, and `exam-prep` lives in `/learning`, one level up.
+      - text: "`422 tag_out_of_scope`"
+        explanation: That would mean the tag can’t go on this item for anyone. It can. The admin could do it. The problem is this key’s reach, so it’s a `403`.
+      - text: "`401 unauthenticated`"
+        explanation: The key is valid, so Shelf knows who is calling. `401` is only for a missing, unknown or revoked key.
+  - prompt: The photo gallery’s key leaked, and the admin revoked it this morning. The gallery hasn’t switched to its new key yet and asks for photos tagged `favourite`.
+    options:
+      - text: "`403 forbidden`"
+        explanation: A `403` means “I know who you are, and no”. A revoked key identifies nobody, so Shelf can’t get that far.
+      - text: "`401 unauthenticated`"
+        correct: true
+        explanation: Right. Revoked, unknown and missing keys all get `401`. The fix is on the caller’s side, with the new key.
+      - text: "`200`, with the photos"
+        explanation: Revoking a key takes effect at once. That’s the whole point when a key leaks.
+      - text: "`404 tag_not_found`"
+        explanation: Authentication comes first. A caller Shelf can’t identify doesn’t get to learn whether a tag exists.
+  - prompt: A read-only app (`tags:read` in `/photos`) tries to put `favourite` on a photo.
+    options:
+      - text: "`401 unauthenticated`"
+        explanation: The key is valid. Shelf knows exactly who this is.
+      - text: "`200`: the photo has the tag"
+        explanation: Reading tags doesn’t include applying them. Default deny means a key can do only what it was given.
+      - text: "`403 forbidden`"
+        correct: true
+        explanation: Right. Tagging needs `tags:apply`, and a read-only app only has `tags:read`.
+      - text: "`422 tag_out_of_scope`"
+        explanation: "`favourite` lives in `/`, so it fits any item. The problem is the missing privilege."
+  - prompt: The admin (every privilege, scope `/`) tries to put `algebra` on a recipe.
+    options:
+      - text: "`200`: the admin can do anything"
+        explanation: The admin can *call* anything, but the data rules still hold. A tag only goes on items in its scope or below.
+      - text: "`403 forbidden`"
+        explanation: The admin’s key covers `/` and has every privilege. This isn’t about who is asking.
+      - text: "`422 tag_out_of_scope`"
+        correct: true
+        explanation: Right. `algebra` lives in `/learning/maths`, and a recipe lives in `/food`. Nobody may put it there, so Shelf says what’s wrong with the request itself.
+  - prompt: A curator whose key covers `/` renames `vegetarian` to `veggie`.
+    options:
+      - text: "`200`: renamed, and the old name keeps working for 30 days"
+        correct: true
+        explanation: Right. Renaming needs `tags:manage`, and `/` contains `/food`. For 30 days, lookups by `vegetarian` still work and nobody else can take that name in `/food`.
+      - text: "`403 forbidden`: only the admin may rename tags"
+        explanation: Renaming is `tags:manage`, which curators have. `admin` is for sources, scopes and keys.
+      - text: "`409 tag_name_taken`"
+        explanation: That would happen only if `/food` already had a tag called `veggie` (ignoring case). Nothing says it does.

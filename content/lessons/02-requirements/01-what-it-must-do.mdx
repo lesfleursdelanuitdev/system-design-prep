@@ -1,0 +1,96 @@
+---
+unit: 2
+order: 1
+title: What the system must do
+summary: Functional requirements say what the system must do. Write each one as a user story with acceptance criteria that two people would check the same way.
+minutes: 8
+terms: [functional-requirement, user-story, acceptance-criteria, requirement]
+---
+
+## In one sentence
+
+A functional requirement says what the system must do, and a good way to write one is as a short story about who needs it and why, followed by the checks that decide when it’s done.
+
+## Example: “find things by tag”
+
+Shelf’s brief arrived as three lines in an email:
+
+> Curators should be able to tag stuff. Apps should be able to find things by tag. Deleted things shouldn’t mess up the tags.
+
+Each line is a wish. Take the second one. “Apps should be able to find things by tag” sounds clear until you sit down to build it:
+
+- Which items come back: all of them, or only the ones that still exist in the app?
+- If a tag is on 20,000 photos, does the app get all 20,000 in one answer?
+- In what order? Newest first? Alphabetical?
+- What if the app asks for a tag that doesn’t exist?
+
+Two developers would answer those differently, and both would believe they had built what was asked. Nobody finds out until the quiz app shows a quiz that was deleted last week, or the photo gallery times out waiting for 20,000 photos.
+
+Here is the same wish, rewritten.
+
+<Compare>
+<Side title="A wish" tone="bad">
+Apps should be able to find things by tag.
+</Side>
+<Side title="A story with acceptance criteria" tone="good">
+
+**As an** app, **I want** to ask for the items that have a tag, **so that** I can show them to my users.
+
+- Only present items come back. Missing ones come back only if the app asks for them.
+- Results come in pages of up to 100.
+- The most recently tagged items come first.
+- An unknown tag gets a `tag_not_found` error, not an empty list.
+
+</Side>
+</Compare>
+
+Every question from the list now has an answer, and each answer can be checked. Hand the story to a tester and they know exactly what to try.
+
+The other two wishes get the same treatment. “Curators should be able to tag stuff” becomes a story about a curator putting a tag on an item. “Deleted things shouldn’t mess up the tags” turns out to hide a decision nobody had made: what *should* happen to the tags? (You’ll write that one yourself at the end.)
+
+### Checking a story: given, when, then
+
+Some teams write each criterion as a tiny test in three steps: the situation, the action, and what must be true afterwards. Here are two for a curator tagging a recipe:
+
+- **Given** the tag `vegetarian` in `/food` and a recipe in `/food`, **when** a curator tags the recipe twice, **then** the recipe has the tag once, and the second answer says `created: false`.
+- **Given** the same tag and a photo in `/photos`, **when** a curator tries to tag the photo, **then** Shelf refuses with `tag_out_of_scope` and nothing changes.
+
+The second one checks what Shelf must *refuse* to do. Wishes almost never mention those cases, and they are where most bugs live.
+
+## The general idea
+
+A <Term id="functional-requirement">functional requirement</Term> says what the system must do: an action someone can take, or a result they can get. It says nothing about how fast or how reliably. Those come in the next lesson.
+
+A <Term id="user-story">user story</Term> is a way to write one from the point of view of whoever needs it. It has three parts:
+
+| Part | It asks | Shelf example |
+|---|---|---|
+| **As a…** | Who needs this? | As a curator, |
+| **I want…** | What do they want to do? | I want to put a tag on an item, |
+| **so that…** | Why? What goes wrong without it? | so that people can find it by that tag. |
+
+The “who” isn’t always a person. In Shelf the apps are users too, and so is the admin, who has needs nobody else sees: knowing when the nightly pull fails, for example, or registering a new app without touching Shelf’s code.
+
+The “so that” is the part people skip, and the part that helps most later. When two requirements pull against each other, the reasons tell you which one matters more.
+
+<Term id="acceptance-criteria">Acceptance criteria</Term> are the checks that decide whether the story is done. Good ones are:
+
+- **Concrete.** Two people reading them would agree on whether Shelf passes.
+- **About behaviour you can see from outside.** “Returns pages of up to 100”, not “uses a cursor table”.
+- **Complete at the edges.** They say what happens when the input is wrong, the item is gone or a rule is broken.
+
+A story plus its criteria is a <Term id="requirement">requirement</Term> someone can check. A story without criteria is still a wish, only a more polite one.
+
+<Callout type="tip" title="One story, one need">
+If a story has “and” in the middle (“I want to tag items and rename tags and see who tagged what”), split it. Small stories are quicker to check, and simpler to drop when time runs short.
+</Callout>
+
+## Common mistakes
+
+- **Writing the solution instead of the need.** “As an app, I want a `tags` table I can query” picks a design before anyone has agreed what the app needs.
+- **Criteria nobody can check.** “Lookups work well” or “tagging feels natural” can’t fail, so they can’t pass either.
+- **Only the happy path.** A tagging story that never says what happens with a tag from the wrong scope, or an item that’s been deleted, leaves the hardest decisions to whoever writes the code.
+
+## Try it
+
+<WriteIt id="u2-wishes-to-stories" />

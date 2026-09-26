@@ -39,12 +39,12 @@ function scalar(f: ScalarField, coerce: boolean): string {
   return s;
 }
 
-function fieldExpr(f: Field | ScalarField | Param, coerce: boolean, indent: string): string {
+function fieldExpr(f: Field | ScalarField | Param, coerce: boolean, indent: string, strict = false): string {
   let s: string;
   if (f.type === 'object[]') {
     const children = ('fields' in f && f.fields ? f.fields : []).filter((c) => c.name);
     const inner = children.map((c) => `${indent}    ${key(c.name)}: ${fieldExpr(c, false, indent + '  ')},`).join('\n');
-    s = `z.array(z.object({\n${inner}\n${indent}  }))`;
+    s = `z.array(${strict ? 'z.strictObject' : 'z.object'}({\n${inner}\n${indent}  }))`;
     if (f.maxItems !== undefined) s += `.max(${f.maxItems})`;
   } else {
     s = scalar(f as ScalarField, coerce);
@@ -56,8 +56,8 @@ function fieldExpr(f: Field | ScalarField | Param, coerce: boolean, indent: stri
   return s;
 }
 
-function objectBody(fields: (Field | Param)[], coerce: (f: Field | Param) => boolean): string {
-  const lines = fields.filter((f) => f.name).map((f) => `  ${key(f.name)}: ${fieldExpr(f, coerce(f), '  ')},`);
+function objectBody(fields: (Field | Param)[], coerce: (f: Field | Param) => boolean, strict = false): string {
+  const lines = fields.filter((f) => f.name).map((f) => `  ${key(f.name)}: ${fieldExpr(f, coerce(f), '  ', strict)},`);
   return lines.length ? `{\n${lines.join('\n')}\n}` : '{}';
 }
 
@@ -79,7 +79,7 @@ export function toZod(c: Contract): string {
   }
   if (hasBody(c.method) && c.body.length) {
     out.push('/** Request body. Strict: unknown fields are rejected, so a typo is caught at once. */');
-    out.push(`export const ${name}Request = z.strictObject(${objectBody(c.body, () => false)});`, '');
+    out.push(`export const ${name}Request = z.strictObject(${objectBody(c.body, () => false, true)});`, '');
     types.push(`${name}Request`);
   }
   if (c.responseStatus !== 204) {

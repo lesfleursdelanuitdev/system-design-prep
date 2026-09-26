@@ -1,0 +1,54 @@
+id: u2-what-if-it-grows
+type: quiz
+title: What if Shelf grows?
+intro: Use the calculator above, or do the sums on paper.
+questions:
+  - prompt: Shelf grows to 500,000 items, still about 1 KB each. Roughly how much storage do the items take, before indexes and backups?
+    options:
+      - text: About 50 MB
+        explanation: That would be 50,000 items. Count the zeros again. 500,000 × 1 KB is 500,000 KB.
+      - text: About 500 MB
+        correct: true
+        explanation: Right. 500,000 × 1 KB = 500,000 KB = 500 MB. Even tripled for indexes and backups, it fits comfortably on one server’s disk.
+      - text: About 5 GB
+        explanation: Ten times too big. 1 GB is a million KB, so 500,000 KB is half a gigabyte.
+      - text: About 500 GB
+        explanation: That would mean 1 MB per item. Shelf stores only an item’s id, title, link and scope, never the item itself.
+  - prompt: App users grow to 15,000 a day, still making 30 lookups each, with a peak factor of 10. What peak should Shelf be ready for?
+    options:
+      - text: About 5 lookups a second
+        explanation: That’s the average (450,000 ÷ 86,400 ≈ 5.2). The busiest minutes run ten times that.
+      - text: About 50 lookups a second
+        correct: true
+        explanation: Right. 15,000 × 30 = 450,000 a day. Divided by 86,400 that’s about 5.2 a second, and × 10 about 52 at peak. Shelf’s scalability target of 50 a second is sized for roughly this.
+      - text: About 500 lookups a second
+        explanation: Check the division. 450,000 ÷ 86,400 is about 5, not 50.
+      - text: About 450,000 lookups a second
+        explanation: That’s lookups a day. Dividing by the seconds in a day is the step that turns a daily total into a rate.
+  - prompt: Someone works out Shelf’s average load today as 150,000 ÷ 3,600 ≈ 42 lookups a second. What went wrong?
+    options:
+      - text: Nothing. 42 a second is the peak
+        explanation: Shelf’s peak is about 17 a second. 42 comes from a unit slip, not from the peak factor.
+      - text: They divided by the seconds in an hour instead of a day, so the answer is 24 times too big
+        correct: true
+        explanation: Right. 150,000 is a daily figure, so divide by the 86,400 seconds in a day. Writing the units next to every number catches this.
+      - text: They forgot to multiply by the peak factor
+        explanation: The peak factor comes afterwards, and they were working out the average. The mistake is in the division. 3,600 is the number of seconds in an hour.
+  - prompt: In two years Shelf may have 20 sources, 500,000 items and about 2.5 million taggings at about 100 bytes each. Does it still fit on one server?
+    options:
+      - text: No. With 20 sources it needs a cluster of database servers
+        explanation: The number of sources barely matters. What matters is the data and the load, and both are still small.
+      - text: Yes. Under 1 GB of data, a few GB with indexes and backups, is small for one server
+        correct: true
+        explanation: Right. 500,000 × 1 KB ≈ 500 MB, and 2.5 million × 100 bytes ≈ 250 MB. Even tripled that’s a few gigabytes. The estimate says “a bigger server”, not “a redesign”.
+      - text: You can’t tell without exact numbers
+        explanation: That’s what estimates are for. When the answer is nowhere near a limit, rough numbers are enough to decide.
+  - prompt: Why does Shelf design for 20 lookups a second when the average is only 1.7?
+    options:
+      - text: Because averages are always wrong
+        explanation: The average is a correct number. It answers a different question (how much work in a day), not how busy the busiest minute gets.
+      - text: Because traffic bunches up. The busiest minutes run about ten times the average, and that’s when a slow Shelf hurts most
+        correct: true
+        explanation: Right. 1.7 × 10 ≈ 17, rounded up to 20. A design that only copes with the average falls over every evening.
+      - text: To leave room for 20 sources
+        explanation: The two 20s are a coincidence. The design load comes from 1.7 × 10 ≈ 17 lookups a second, rounded up.
