@@ -1,0 +1,130 @@
+---
+unit: 11
+order: 4
+title: Contract tools
+summary: OpenAPI, JSON Schema, AsyncAPI, Zod and Protocol Buffers each describe a different kind of contract. Which to reach for, and when, using Shelf’s own contracts.
+minutes: 9
+terms: [openapi, json-schema, asyncapi, zod, protobuf, schema]
+---
+
+## In one sentence
+
+Each contract tool describes a different kind of promise (a whole HTTP API, one JSON shape, a stream of messages, data inside your own code, compact binary messages), so you pick the tool by the kind of contract in front of you.
+
+## Example: five Shelf contracts, five tools
+
+Shelf has more contracts than it first seems. Here are five, and the tool that suits each one.
+
+### 1. Shelf’s own API
+
+The endpoints under `/v1` are called by the apps and by the admin web app. Their callers need every path, method, input, response and error code. That’s a job for <Term id="openapi">OpenAPI</Term>: one `openapi.yaml` file describing the whole API, from which tools generate reference docs, client code and test checks. You saw one endpoint written this way in [Write it down so a machine can check it](/learn/contracts/write-it-down-for-machines/).
+
+### 2. The list endpoint each app implements
+
+Shelf defines this contract, and three other teams implement it, in whatever language they use. What matters most is the shape of each page. That’s <Term id="json-schema">JSON Schema</Term>: a `list-page.schema.json` file that any language can check a response against. It also sits inside the OpenAPI description of the endpoint, because OpenAPI uses JSON Schema for its shapes.
+
+### 3. Checking pushes inside Shelf’s code
+
+Before touching the database, the API service checks every pushed batch. Suppose Shelf is written in TypeScript. Then <Term id="zod">Zod</Term> fits: one definition checks the data while the code runs, and gives the compiler the matching types.
+
+```typescript
+const Change = z.object({
+  op: z.enum(['upsert', 'delete']),
+  id: z.string().min(1).max(200),
+  title: z.string().max(300).optional(),
+  url: z.url().max(2000).optional(),
+  scope: z.string().startsWith('/').max(200).optional(),
+  updatedAt: z.iso.datetime(),
+});
+const Batch = z.object({ changes: z.array(Change).min(1).max(500) });
+type Change = z.infer<typeof Change>;
+```
+
+### 4. Events, if Shelf ever sends them
+
+Suppose the photo gallery asks to hear the moment a photo is tagged, instead of asking Shelf every few minutes. Shelf would publish a “tag applied” message to a queue, and any app could subscribe. There’s no request and no response, only messages on a channel. That’s <Term id="asyncapi">AsyncAPI</Term>:
+
+```yaml
+asyncapi: 3.0.0
+info:
+  title: Shelf events
+  version: 1.0.0
+channels:
+  tagApplied:
+    address: shelf.tag.applied
+    messages:
+      tagApplied:
+        payload:
+          type: object
+          required: [tagId, sourceId, itemId, taggedAt]
+          properties:
+            tagId: { type: string }
+            sourceId: { type: string }
+            itemId: { type: string, maxLength: 200 }
+            taggedAt: { type: string, format: date-time }
+operations:
+  sendTagApplied:
+    action: send
+    channel:
+      $ref: '#/channels/tagApplied'
+```
+
+The payload is JSON Schema again. AsyncAPI is to messages what OpenAPI is to requests and responses.
+
+### 5. A busy link between services Shelf doesn’t have
+
+If Shelf ever split into several services calling each other thousands of times a second, <Term id="protobuf">Protocol Buffers</Term> would earn its place: small binary messages, quick to read, with numbered fields that make changes safe.
+
+```protobuf
+syntax = "proto3";
+
+message Tagging {
+  string tag_id = 1;
+  string source_id = 2;
+  string item_id = 3;
+  string tagged_at = 4;
+}
+```
+
+At 20 lookups a second, Shelf doesn’t need it. JSON over HTTP is plenty fast, and every app team can read it without special tools.
+
+### Which to reach for
+
+| You need to describe… | Reach for | Because | In Shelf |
+|---|---|---|---|
+| a whole HTTP API: paths, methods, inputs, responses, errors | OpenAPI | one file drives docs, clients and tests | the `/v1` API |
+| the shape of a JSON document, checkable in any language | JSON Schema | a standard that every language can validate against | a page from a list endpoint |
+| messages on a queue or topic | AsyncAPI | channels and messages, like OpenAPI for events | a future “tag applied” message |
+| data checked inside TypeScript code | Zod | runtime checks and compile-time types from one definition | the push body |
+| compact, fast messages between services you control | Protobuf | binary and small, and numbered fields evolve safely | not needed |
+
+## The general idea
+
+A <Term id="schema">schema</Term> is a precise description of the shape of some data. All five tools write contracts down so a machine can check them, but they describe different things:
+
+- **A whole interface, or one shape?** OpenAPI and AsyncAPI describe a whole interface: its operations or channels, and the messages in each. JSON Schema, Zod and Protobuf describe shapes. The two interface tools use JSON Schema inside them for their shapes.
+- **Any language, or one?** JSON Schema, OpenAPI, AsyncAPI and Protobuf are files that any language can read. Zod lives in TypeScript code; other languages have their own equivalents.
+- **Text or binary?** Protobuf messages travel as compact binary. The others describe JSON, which people can read.
+
+The rule that matters most: **one source of truth per contract.** Two hand-written copies of the same contract (an `openapi.yaml` and a Zod schema, say) drift apart within weeks. Write one, and generate the other as part of the build.
+
+<Callout type="tradeoff" title="Spec first or code first?">
+
+**Spec first:** write the OpenAPI or JSON Schema file, and generate types or checks from it. The contract is designed and reviewed before any code exists, and other teams can read it without reading your code. But generated code can be clumsy.
+
+**Code first:** write Zod in the code, and generate JSON Schema and OpenAPI from it. There’s one place to change, and the published contract can’t drift from the checks. But a refactor can change the contract by accident, and other teams wait for the generated file.
+
+A reasonable split for Shelf: spec first for the list endpoint, because other teams implement it; code first for Shelf’s own `/v1`, as long as the generated `openapi.yaml` is reviewed like any other change.
+
+</Callout>
+
+## Common mistakes
+
+- **Choosing by fashion.** Protobuf for a 20-requests-a-second API that three teams read by hand costs readability and buys nothing.
+- **Two hand-written copies.** They will disagree. Generate one from the other.
+- **Describing only the happy path.** A spec without its error responses is half a contract. Put `tag_out_of_scope` and the rest in it.
+- **Expecting a schema to say everything.** “A listing that reaches `nextCursor: null` is complete” is a promise no schema can express. Write it in words next to the schema.
+
+## Try it
+
+<Quiz id="u11-which-contract-tool" />

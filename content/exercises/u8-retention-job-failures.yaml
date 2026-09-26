@@ -1,0 +1,47 @@
+id: u8-retention-job-failures
+type: write
+title: The retention job’s failure modes
+prompt: |
+  Every hour, Shelf’s retention job moves items along their life. It does four things:
+
+  1. Find items that have been missing for more than 30 days.
+  2. For each one, remove its taggings, record them in the audit log, and mark the item trashed.
+  3. Find items that were trashed more than 7 days ago.
+  4. Delete their rows.
+
+  List its failure modes. For each step, ask what happens if it fails, if it’s slow and if it runs twice, and write what *should* happen. Don’t forget the job as a whole: what if it stops running altogether?
+starter: |
+  | Step | What can go wrong | What should happen |
+  |---|---|---|
+  | The whole job | | |
+  | 1. Find old missing items | | |
+  | 2. Trash each item | | |
+  | 3. Find old trashed items | | |
+  | 4. Delete their rows | | |
+rows: 14
+hints:
+  - A job can run twice without anyone retrying it. What if one run takes longer than an hour?
+  - What if the server restarts in the middle of step 2, after the tags are removed but before the item is marked trashed?
+  - Between step 1 finding an item and step 2 trashing it, the app might push that item again. What should step 2 check?
+  - A job that has stopped raises no error. How would anyone find out?
+checklist:
+  - Covers every step, not only the obvious crash
+  - Makes each item’s change (tags removed, audit record written, status set) happen together or not at all
+  - Checks each item’s state again at the moment it changes it, so an item that has come back in the meantime isn’t trashed
+  - Says what makes running twice harmless
+  - Says how someone would notice that the job has stopped or fallen behind
+modelAnswer: |
+  | Step | What can go wrong | What should happen |
+  |---|---|---|
+  | The whole job | **Fails:** it crashes halfway. | It works in small batches (say 1,000 items), each in its own transaction. The next hourly run carries on where this one stopped. |
+  | The whole job | **Slow:** a run takes more than an hour. | The next run may start while it’s still going. That’s fine, because running twice is harmless (see step 2). |
+  | The whole job | **Stops running** after a bad deploy. | Nothing moves on, and nothing complains. Record each run’s time and counts, and alert if there hasn’t been a good run for a few hours. |
+  | 1. Find old missing items | **Slow:** hundreds of thousands of items to look through. | An index on the status and `missing_since` lets it find them without reading every row. |
+  | 2. Trash each item | **Fails** between removing the tags and marking the item trashed. | Removing the taggings, writing the audit records and setting the status happen in one transaction. A crash undoes all three. |
+  | 2. Trash each item | **Twice:** two overlapping runs pick the same item. | The change applies only to an item that is *still* missing, and has been for over 30 days. The second run finds it already trashed and does nothing. |
+  | 2. Trash each item | The app pushed the item again after step 1 found it. | The same check, made inside the transaction, finds it present and leaves it alone. Its tags survive. |
+  | 3. Find old trashed items | **Slow** | Same as step 1: an index on the status and `trashed_at`. |
+  | 4. Delete their rows | **Twice** | Deleting a row that’s already gone does nothing. |
+  | 4. Delete their rows | The item came back during its 7 days. | Only rows that are *still* trashed, and trashed over 7 days ago, are deleted. |
+
+  The idea that makes it all work: each change says what it expects to find (“still missing, for over 30 days”) and does nothing if the world has moved on. That one habit makes the job safe to crash, to overlap and to run again.

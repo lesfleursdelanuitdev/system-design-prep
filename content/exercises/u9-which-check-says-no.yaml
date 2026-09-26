@@ -1,0 +1,58 @@
+id: u9-which-check-says-no
+type: sort
+title: Which check says no?
+intro: |
+  Each request below is refused. Decide which check refuses it. The keys:
+
+  - **Quiz app:** `items:push` (for `quizzes`), `tags:read` and `tags:apply` in `/learning`
+  - **Recipe site:** `items:push` (for `recipes`), `tags:read` and `tags:apply` in `/food`
+  - **Maths curator:** `tags:read`, `tags:apply` and `tags:manage` in `/learning/maths`
+
+  Tags: `vegetarian` in `/food`, `exam-prep` in `/learning`, `algebra` in `/learning/maths`.
+buckets:
+  - id: who
+    label: "Who? (401)"
+    hint: Shelf doesn’t know who is calling.
+  - id: what
+    label: "What? (403, no privilege)"
+    hint: The key lacks the privilege for this kind of action.
+  - id: where
+    label: "Where? (403, outside the scope)"
+    hint: Something the request touches is outside the key’s scope.
+  - id: nobody
+    label: Nobody may (a data rule)
+    hint: The key is fine. The request breaks a rule about the data itself.
+items:
+  - text: The quiz app’s key tries to rename `exam-prep`
+    bucket: what
+    reason: The tag is inside `/learning`, so the scope is fine. But renaming needs `tags:manage`, and an app’s key doesn’t have it.
+  - text: The maths curator puts `exam-prep` on a maths quiz
+    bucket: where
+    reason: The quiz is inside her scope, but `exam-prep` is defined in `/learning`, above it. Tagging needs the item and the tag both inside the key’s scope.
+  - text: A request arrives with no key at all
+    bucket: who
+    reason: Without a key there’s nobody to check privileges for. `401 unauthenticated`.
+  - text: A curator whose key covers `/` puts `exam-prep` on a photo
+    bucket: nobody
+    reason: "The key reaches everything and may tag. But `exam-prep` fits only items in `/learning` and below, for anyone: `422 tag_out_of_scope`."
+  - text: The recipe site’s key asks for the quizzes tagged `exam-prep`
+    bucket: where
+    reason: The key has `tags:read`, but only in `/food`. `exam-prep` lives in `/learning`, beside it, not below it.
+  - text: The photo gallery sends a key the admin revoked yesterday
+    bucket: who
+    reason: A revoked key identifies nobody. Shelf answers `401` and checks nothing else.
+  - text: The maths curator creates a tag called `Algebra` in `/learning/maths`
+    bucket: nobody
+    reason: "She may create tags there. But names are unique in a scope, ignoring case, and `algebra` already exists: `409 tag_name_taken`."
+  - text: A read-only app with `tags:read` in `/learning` puts `exam-prep` on a quiz
+    bucket: what
+    reason: The quiz and the tag are both in its scope. But putting tags on items needs `tags:apply`, and it can only read.
+  - text: The maths curator tags a maths quiz that the quiz app deleted last week
+    bucket: nobody
+    reason: "The key is fine. The quiz is missing, and missing items take no new tags: `409 item_missing`."
+  - text: The quiz app sends its key with one character mistyped
+    bucket: who
+    reason: That’s not a key Shelf issued, so Shelf doesn’t know who is calling. `401`.
+  - text: The maths curator looks up the recipes tagged `vegetarian`
+    bucket: where
+    reason: She has `tags:read`, but `vegetarian` lives in `/food`, outside her scope.

@@ -1,0 +1,76 @@
+id: u10-adr-push-or-pull
+type: write
+title: "Write ADR-001: push, pull, or both?"
+prompt: |
+  Shelf keeps a cached copy of each app’s items: title, link, scope, and whether each one still exists. It has to find out when an app’s items change. There are two basic ways:
+
+  - **Push:** each app calls Shelf when one of its items changes.
+  - **Pull:** Shelf asks each app for its full list of items on a schedule.
+
+  Write ADR-001 for this decision. Use what you know about Shelf: the apps are built by other teams and will sometimes fail to send a change; asking them for more than one list endpoint is expensive; one developer runs Shelf; a pushed change should show in lookups within 5 s; and priority one is never to lose or wrongly remove a tag.
+
+  Compare at least three options, choose one, and be honest about what your choice costs.
+starter: |
+  # ADR-001:
+
+  - Status:
+  - Date:
+
+  ## Context
+
+
+  ## Options
+
+  1.
+  2.
+  3.
+
+  ## Decision
+
+
+  ## Consequences
+
+rows: 24
+hints:
+  - Start the context with what must stay fresh (titles, deletions) and why that’s hard. Who builds the apps, and how reliable are they?
+  - The obvious options are push only, pull only, and both. For each one, ask two questions. How fresh is Shelf’s copy? What happens when one message is lost?
+  - A missed delete is the nasty case. Under push only, what happens to an item whose delete never arrives?
+  - If you choose both, the two paths can disagree. Which change wins when they do? And what stops a half-finished pull from marking items missing?
+  - Consequences cut both ways. What must each app now build? What does Shelf’s one developer now have to run and watch?
+checklist:
+  - Has a status and a date
+  - The context gives the facts that force the decision (freshness, apps that sometimes miss a change, other teams, one developer), not the answer
+  - Compares at least three real options, each with its main cost
+  - Says what happens to a missed push, or a missed delete, under each option
+  - States the decision in one sentence
+  - Lists consequences that cost something, not only benefits
+  - Says what the apps must build as a result
+  - If it chooses both, says how disagreements between push and pull are settled
+  - Fits on one page
+modelAnswer: |
+  # ADR-001: Apps push changes, and Shelf also pulls a full list every night
+
+  - **Status:** accepted
+  - **Date:** the day you decided
+
+  ## Context
+
+  Shelf keeps a cached copy of each app’s items: title, link, scope, and whether each still exists. Lookups show these copies, so they must stay fresh: a pushed change should show within 5 s. The apps are built by other teams and will sometimes fail to tell Shelf about a change (a bug, a failed deploy, a dropped request). Asking them for more than one list endpoint is expensive. One developer runs Shelf. Priority one is never to lose or wrongly remove a tag, and correctness beats freshness.
+
+  ## Options
+
+  1. **Push only.** Each app calls Shelf when an item changes. Fresh within seconds. But a missed push is never repaired, and a missed delete leaves a ghost item for ever.
+  2. **Pull only.** Shelf asks each app for its full list every night. Simple for apps (one list endpoint) and it repairs itself. But changes take up to a day to appear, and every big source is listed in full every time.
+  3. **Both.** Apps push for freshness; Shelf pulls nightly as a safety net.
+
+  ## Decision
+
+  Both: apps push changes as they happen, and Shelf pulls a full listing from every app each night.
+
+  ## Consequences
+
+  - Apps must implement the list endpoint, and should push. That is more work for each app team than either option alone.
+  - Shelf has two paths that can disagree. It orders changes by `updatedAt` (an older change is ignored), and it never lets an incomplete listing mark items missing.
+  - More code for one developer to run: the push intake and the nightly pull, each with its own failures to watch and alert on.
+  - In return, the system repairs itself overnight: anything a push missed is fixed within 24 hours.
+  - Revisit if a source grows too big to list in full every night.

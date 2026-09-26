@@ -1,0 +1,12 @@
+- id: c4-container
+  term: Container (C4)
+  short: "In the C4 model, a part of a system that runs or stores data on its own, such as a web app, an API service, a background worker or a database. Not the same thing as a Docker container."
+  see: [c4-model]
+- id: consumer-driven-contract
+  term: Consumer-driven contract
+  short: A contract test written by a consumer, listing only what it actually relies on. The provider runs every consumer's tests before it releases, so it knows what a change would break.
+  see: [contract-test, consumer, provider]
+- id: continuous-integration
+  term: Continuous integration (CI)
+  short: Building and testing every change automatically as soon as it is pushed, before it can be merged or released.
+  aka: [CI]

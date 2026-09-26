@@ -278,7 +278,7 @@ A retention job runs every hour and moves items along; it is safe to run twice.
 | Curator | `tags:read`, `tags:apply`, `tags:manage` | a scope |
 | Admin | everything | `/` |
 
-**Default deny:** a key can do nothing it wasn't given, and only inside its scope. A key for `/learning` can tag a quiz in `/learning/maths` but can't even see that `/photos` exists.
+**Default deny:** a key can do nothing it wasn't given, and only inside its scope. A key for `/learning` can tag a quiz in `/learning/maths`, but anything in `/photos` gets `403 forbidden`: it can't read or change a thing there.
 
 ## 11. One decision (ADR-001): push, pull, or both?
 

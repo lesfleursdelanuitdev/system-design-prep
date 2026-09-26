@@ -1,0 +1,40 @@
+id: u7-tag-rename-states
+type: diagram
+title: A tag being renamed
+prompt: |
+  Draw the state diagram for one tag, from the moment it’s created. Here is what Shelf does:
+
+  - A curator creates a tag in a scope. Its name is unique in that scope, ignoring case.
+  - **Renaming** a tag (`PATCH /v1/tags/{tagId}`) keeps the old name as an **alias for 30 days**. Lookups by the old name still work, and nobody can create a tag with that name in that scope meanwhile.
+  - **Renaming it again** moves the alias: the name it gives up in that rename becomes the alias, for a fresh 30 days.
+  - When the 30 days pass, the alias is dropped and the old name is free for anyone.
+  - **Deleting** a tag (`DELETE /v1/tags/{tagId}`) removes all its taggings.
+
+  Label every arrow with the event that causes it. Taggings coming and going don’t change the tag’s state, so leave them out.
+starter: |
+  stateDiagram-v2
+    [*] --> Active : created in a scope
+hints:
+  - Does a rename create a new state? Ask whether the tag behaves differently afterwards. While an old name is held, lookups by it work and nobody can take it. That’s a difference.
+  - "Time can be an event: `Aliased --> Active : 30 days pass`."
+  - A transition can go from a state back to itself. What does a second rename do to a tag that already has an alias?
+  - A tag can be deleted at any point in its life. How many arrows does that need?
+  - A rename that fails, because the new name is taken, changes nothing. It isn’t a transition.
+modelAnswer: |
+  stateDiagram-v2
+    [*] --> Active : created in a scope
+    Active --> Aliased : renamed (old name kept as an alias)
+    Aliased --> Aliased : renamed again (alias moves, 30 days restart)
+    Aliased --> Active : 30 days pass (alias dropped)
+    Active --> Deleted : deleted (taggings removed)
+    Aliased --> Deleted : deleted (taggings removed)
+    Deleted --> [*]
+modelDescription: A new tag starts Active when a curator creates it in a scope. Renaming an Active tag moves it to Aliased, where it has its new name and its old name still works as an alias that nobody else in the scope can take. Renaming an Aliased tag again keeps it Aliased, with the alias moved to the name it gave up in that rename and the 30 days starting again. When 30 days pass without another rename, the alias is dropped and the tag is Active again. Deleting the tag from either Active or Aliased removes all its taggings and moves it to Deleted, where its life ends.
+checklist:
+  - Start with `[*]` pointing at the first state, labelled with the event that creates the tag
+  - Have a separate state for a renamed tag whose old name is still held, not only a note on the arrow
+  - Label every arrow with the event that causes it
+  - Show that renaming an aliased tag again keeps it aliased (an arrow back to the same state)
+  - Show “30 days pass” as the event that takes it back to plain Active
+  - Allow deleting from both states, and say that the taggings go with it
+  - Avoid states that are really events, such as “Renaming”

@@ -1,0 +1,92 @@
+---
+unit: 10
+order: 2
+title: Recording decisions
+summary: A short, dated note for each big decision (the context, the options, the choice and what it costs) so the reasons outlive everyone’s memory of them.
+minutes: 10
+terms: [adr, trade-off, architecture]
+---
+
+## In one sentence
+
+An architecture decision record is a short, dated page saying what you decided, what else you considered and why, so that nobody has to guess later.
+
+## Example: the 20% guard
+
+A year after Shelf launched, the photo gallery clears out 11,000 old photos in one go. That night’s pull finds 11,000 of its 45,000 photos gone: 24%. Shelf holds the run and alerts the admin.
+
+The admin is new. The developer who built Shelf has moved to another team. The new admin opens the code and finds this:
+
+```typescript
+if (wouldGoMissing / knownItems > 0.2) return holdRun(source, 'too_many_missing');
+```
+
+Why 20%? Why hold the run, instead of carrying on? Can this check be deleted, now that it’s getting in the way? The code says *what* Shelf does. It can’t say why, what else was considered, or what would break without it.
+
+Next to the code, in `docs/adr/0003-hold-suspicious-pulls.md`, there is a page:
+
+<Callout type="shelf" title="ADR-003: Hold a pull that would mark many items missing">
+
+**Status:** accepted. **Date:** 4 November 2025.
+
+**Context.** After a complete listing, Shelf marks every item that didn’t appear as missing, and missing items lose their tags after 30 days. If an app’s list endpoint has a bug that ends the listing early but still returns `nextCursor: null`, the listing looks complete, and thousands of items start losing their tags. Our first priority is never to lose or wrongly remove a tag. On a normal night, well under 1% of a source’s items go missing.
+
+**Options.**
+
+1. *Trust every complete listing.* The simplest. One bug in one app can mark a whole source missing.
+2. *Never mark items missing from a pull; only pushed deletes count.* Safe, but items deleted without a push stay for ever as ghosts, which is the problem the pull exists to solve.
+3. *Trust a complete listing unless it would mark more than a set share of a source’s items missing; then hold the run and ask the admin.*
+
+**Decision.** Option 3, with the threshold at 20%.
+
+**Consequences.** A genuine big clear-out needs the admin to approve the run: rare, and cheap. A bug that loses less than 20% still gets through; the 30-day grace period is the second guard, since the items come back with their tags once the app is fixed. The 20% is a guess, to be revisited after six months of pull history.
+
+</Callout>
+
+Now the new admin knows three things the code couldn’t say. The hold is working as intended, so approving tonight’s run is the right move. Deleting the check would bring back a real risk. And the number was always meant to be revisited, so tuning it is fair game, in a new ADR.
+
+## The general idea
+
+An <Term id="adr">architecture decision record</Term> (ADR) records one decision. It is written when the decision is made, by the people making it, and kept in the repository next to the code it explains: one short file per decision, numbered in order.
+
+| Part | What it says |
+|---|---|
+| **Title** | The decision as a short phrase, with a number: “ADR-003: Hold a pull that would mark many items missing”. |
+| **Status** | Proposed, accepted, or superseded by a later ADR. |
+| **Date** | When it was decided. |
+| **Context** | The facts that force a decision: requirements, constraints, priorities, what went wrong before. Facts, not the answer. |
+| **Options** | Two to four real options, each with what it costs. |
+| **Decision** | The chosen option, in one sentence. |
+| **Consequences** | What follows, good and bad: what gets simpler, what gets harder, what to watch, when to revisit. |
+
+### Why future-you needs them
+
+- **Code shows what, never why.** The reasons live in people’s heads, and people forget or move on. On a one-developer service like Shelf, the team’s memory is one person.
+- **The rejected options matter most.** Someone will propose option 1 again next year. The ADR says why it lost, and what would have to change for it to win.
+- **Writing it forces the thinking.** If you can’t name two options and what each costs, you haven’t made a decision yet. You’ve taken a default.
+- **Honest costs earn trust.** Every option is a <Term id="trade-off">trade-off</Term>. An ADR that admits its downsides is one the next person believes.
+
+### Which decisions get one?
+
+The ones that pass the rewrite test from [Design vs architecture](/learn/getting-oriented/design-vs-architecture/): decisions that are expensive to reverse, or likely to be questioned. In other words, the <Term id="architecture">architecture</Term>. For Shelf: push and pull (ADR-001), Postgres on one server, the 30-day grace period, the 20% guard, letting items live in several scopes. Not the admin screen’s page size.
+
+### Replace, don’t rewrite
+
+Never rewrite an accepted ADR. When a decision changes, write a new ADR and mark the old one “superseded by ADR-011”. If next year the 20% becomes a setting for each source, ADR-011 says so and why, and ADR-003 stays as it was. (Fixing a typo is fine.) Over time the folder becomes a history of how the design got here.
+
+<Callout type="tip" title="Keep it to one page">
+An ADR fits on one page. If yours runs to several, it has become a design document: keep the decision in the ADR and link to the rest. Write it in plain markdown, so it is reviewed in the same pull request as the code it explains.
+</Callout>
+
+## Common mistakes
+
+- **Recording only the winner.** “We chose Postgres” tells future-you nothing. The options, and why they lost, are the point.
+- **Hiding the costs.** Every real decision gives something up. An ADR with no downsides reads like a sales pitch, and nobody trusts it.
+- **Writing it months later.** By then the context is a reconstruction. Write it when you decide, even if it’s rough.
+- **Editing history.** Rewriting an old ADR to match a new decision erases the reason things changed. Supersede it instead.
+
+## Try it
+
+Now write the ADR for Shelf’s first and biggest decision: how does Shelf find out when an app’s items change?
+
+<WriteIt id="u10-adr-push-or-pull" />

@@ -1,0 +1,50 @@
+id: u11-plantuml-to-mermaid
+type: diagram
+title: From PlantUML to Mermaid
+prompt: |
+  The admin found this PlantUML sequence diagram in an old note. It shows a curator tagging a quiz from Shelf’s admin web app. Shelf’s docs now use Mermaid, so rewrite it as a Mermaid `sequenceDiagram` that says the same thing.
+
+  ```text
+  @startuml
+  actor Curator
+  participant "Admin web app" as Web
+  participant "API service" as API
+  database Postgres as DB
+
+  Curator -> Web : tag quiz q-812 with algebra
+  Web -> API : PUT /v1/items/quizzes/q-812/tags/tag_7kq2m9
+  API -> DB : is the item inside the tag's scope?
+  DB --> API : yes
+  API -> DB : store the tagging, if it isn't there already
+  API --> Web : 200, created true
+  Web --> Curator : shows the tag on the quiz
+  @enduml
+  ```
+starter: |
+  sequenceDiagram
+    actor Curator
+    participant Web as Admin web app
+hints:
+  - Declare the participants first, in the same order, so the columns come out the same. `actor` works in Mermaid too.
+  - For PlantUML’s `database`, the simplest Mermaid equivalent is a plain participant, `participant DB as Postgres`.
+  - "PlantUML’s `->` (a call) becomes `->>` in Mermaid, and `-->` (a reply) becomes `-->>`."
+  - "A message is written `From->>To: text`: sender, arrow, receiver, a colon, then the words."
+modelAnswer: |
+  sequenceDiagram
+    actor Curator
+    participant Web as Admin web app
+    participant API as API service
+    participant DB as Postgres
+    Curator->>Web: tag quiz q-812 with algebra
+    Web->>API: PUT /v1/items/quizzes/q-812/tags/tag_7kq2m9
+    API->>DB: is the item inside the tag's scope?
+    DB-->>API: yes
+    API->>DB: store the tagging, if it isn't there already
+    API-->>Web: 200, created true
+    Web-->>Curator: shows the tag on the quiz
+modelDescription: A curator asks the admin web app to tag quiz q-812 with algebra. The web app sends a PUT request to the API service. The API service asks Postgres whether the item is inside the tag’s scope, and Postgres says yes. The API service stores the tagging if it isn’t there already, and replies 200 with created true. The web app shows the tag on the quiz.
+checklist:
+  - Has the same four participants, in the same order, with the same display names
+  - Uses solid arrows (`->>`) for calls and dashed arrows (`-->>`) for replies
+  - Keeps all seven messages, in the same order and with the same wording
+  - Draws without errors in the preview
