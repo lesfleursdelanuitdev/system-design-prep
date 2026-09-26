@@ -1,0 +1,9 @@
+- id: circular-dependency
+  term: Circular dependency
+  short: Two or more parts that depend on each other, directly or round a loop. None of them can then be changed, tested or understood on its own.
+  aka: [dependency cycle]
+  see: [dependency, coupling]
+- id: adapter
+  term: Adapter
+  short: A small piece of code that translates between something outside and the shape a module expects, such as a source kind that reads a sitemap for Shelf’s nightly pull.
+  see: [plug-in-point, registry]

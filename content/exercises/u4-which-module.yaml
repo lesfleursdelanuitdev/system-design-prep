@@ -1,0 +1,48 @@
+id: u4-which-module
+type: sort
+title: Which module owns it?
+intro: Here are 10 pieces of data from Shelf. Each has exactly one module in charge of it. Any other module that needs it has to ask that one.
+buckets:
+  - id: sources
+    label: sources
+    hint: Registered apps and how to reach them.
+  - id: catalog
+    label: catalog
+    hint: Items and what Shelf knows about them.
+  - id: tagging
+    label: tagging
+    hint: Tags and which items have them.
+  - id: access
+    label: access
+    hint: Keys and what they may do.
+items:
+  - text: An item’s cached title
+    bucket: catalog
+    reason: Items, and everything Shelf stores about them (cached title, link, status), belong to `catalog`. Only `catalog` writes to the items table.
+  - text: The old name of a renamed tag, kept working for 30 days
+    bucket: tagging
+    reason: Tag aliases exist only because tags get renamed, so they live with tags. A separate module would split one job in two.
+  - text: The privileges on the photo gallery’s key
+    bucket: access
+    reason: Keys and privileges belong to `access`, which checks every request. Other modules never look at keys themselves.
+  - text: The recipe site’s list URL
+    bucket: sources
+    reason: Where to fetch a source’s full list is part of its registration. `sync` asks `sources` for it at pull time.
+  - text: Which items have the tag `algebra`
+    bucket: tagging
+    reason: Taggings belong to `tagging`. A lookup goes through `tagging`, which asks `catalog` which of those items are present.
+  - text: Whether an item is present, missing or trashed
+    bucket: catalog
+    reason: Status belongs with the item. `sync` tells `catalog` what it has seen, and `catalog` decides and records the status.
+  - text: The hash of an API key’s secret
+    bucket: access
+    reason: Only `access` ever needs to compare a secret with its hash. Keeping it anywhere else would widen who can see it.
+  - text: The tag `vegetarian` and its description
+    bucket: tagging
+    reason: Tags are `tagging`’s. The scope it is defined in belongs to `scopes`, but the tag itself doesn’t.
+  - text: The quiz app’s home scope
+    bucket: sources
+    reason: The scope itself (a node in the tree) belongs to `scopes`, but *which* scope is this source’s home is a fact about the source, recorded when it registered.
+  - text: When an item went missing (`missing_since`)
+    bucket: catalog
+    reason: It is part of the item’s status, and the retention job relies on it. One owner means it can’t be forgotten, as it was in the story.

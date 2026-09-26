@@ -1,0 +1,45 @@
+id: u3-good-key
+type: sort
+title: Would this make a good item id?
+intro: Each app chooses what it sends Shelf as an item id. The contract says an item id is text, at most 200 characters, never changes and is never reused. Would each of these keep that promise?
+buckets:
+  - id: good
+    label: A good item id
+    hint: Stable, never reused, short enough.
+  - id: poor
+    label: A poor item id
+    hint: It can change, be reused, or break a limit.
+items:
+  - text: The recipe’s title, “Lemon tart”
+    bucket: poor
+    reason: Titles change and two recipes can share one. A new title would look like a new recipe, and the old one’s tags would start their 30-day countdown.
+  - text: A random id the quiz app creates when a quiz is first saved
+    bucket: good
+    reason: Random, unique, and it never needs to change. A typical random id is 36 characters, well under 200.
+  - text: The photo’s file name, `IMG_2041.jpg`
+    bucket: poor
+    reason: Cameras restart their numbering, so two photos can share a file name. Some apps rename files on upload, too.
+  - text: The recipe’s link, `/recipes/lemon-tart`
+    bucket: poor
+    reason: Links change when a recipe is renamed or the site is reorganised, and a deleted recipe’s link can later be given to a new one.
+  - text: The quiz app’s database row number, which it never resets or reuses
+    bucket: good
+    reason: A plain number is fine as text, as long as the promise holds. The risk is a future database move; the app must keep sending the same numbers after it.
+  - text: The photo’s position in the gallery, “photo 17 of 45,000”
+    bucket: poor
+    reason: It changes every time a photo is added or removed before it.
+  - text: A fingerprint (hash) of the photo’s image data
+    bucket: poor
+    reason: Crop or brighten the photo and the fingerprint changes, so Shelf would see a new item. Two identical uploads would also share one.
+  - text: A readable slug made from the title when the recipe is first published, such as `lemon-tart-2019`, stored and never updated afterwards
+    bucket: good
+    reason: It looks like a title, but what matters is the promise. Fixed at creation, never changed, never reused. Readable ids are fine if the app keeps to that.
+  - text: A counter the gallery resets to 1 after every restore from backup
+    bucket: poor
+    reason: After a restore, new photos get old photos’ numbers, and inherit their tags if the old ones went missing less than 30 days ago.
+  - text: The photo’s old id, kept in a column after the gallery moved to a new database that numbers photos differently
+    bucket: good
+    reason: Exactly the fix from the lesson. The id Shelf sees stays the same, whatever the gallery’s new database uses inside.
+  - text: A 260-character path made of the album name and the photo name
+    bucket: poor
+    reason: Too long for Shelf’s 200-character limit, and it changes whenever someone renames an album.

@@ -1,0 +1,8 @@
+- id: belongs-to
+  term: Belongs to
+  short: The “one” end of a one-to-many relationship, when the thing on the “many” side can’t exist without it and can’t move to another. Each item belongs to exactly one source.
+  see: [one-to-many, relationship]
+- id: composite-key
+  term: Composite key
+  short: A key made of more than one value together. A Shelf item is identified by its source id and its item id as a pair, because neither is unique on its own.
+  see: [key, primary-key]

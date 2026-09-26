@@ -1,0 +1,9 @@
+- id: join-table
+  term: Join table
+  short: A table that stores a many-to-many relationship, one row per link. Shelf’s taggings table is one; each row joins one tag to one item.
+  aka: [link table]
+  see: [many-to-many, tagging]
+- id: audit-log
+  term: Audit log
+  short: A lasting record of who changed what, and when. Shelf writes one when it removes tags from a trashed item, so an admin can see later what went.
+  see: [soft-delete, log]

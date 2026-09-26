@@ -1,0 +1,55 @@
+id: u5-keeping-copies-fresh
+type: quiz
+title: Keeping the copies fresh
+questions:
+  - prompt: Shelf has stored the title “Lemon tart” for recipe `1042`, with `source_updated_at` 09:59. A push arrives with the title “Lemon trat” and `updatedAt` 09:30. What does Shelf do?
+    options:
+      - text: Applies it, because it arrived most recently
+        explanation: Arrival order isn’t change order. This is an old change arriving late, perhaps a retry, and applying it would bring the typo back.
+      - text: Ignores that change and reports it as ignored, while applying the rest of the batch
+        correct: true
+        explanation: Right. A change older than the stored `updatedAt` is ignored, and the response says so for that change. The other changes in the batch are applied as usual.
+      - text: Rejects the whole batch with an error
+        explanation: A late change isn’t an error; retries and slow networks make it normal. Rejecting the batch would make the app retry changes that were fine.
+      - text: Keeps both titles until an admin chooses
+        explanation: There is nothing to choose. The app’s own timestamps say which title is newer, and the owner’s latest version wins.
+  - prompt: A curator notices that a cached title in Shelf’s admin screen has a typo. What’s the right fix?
+    options:
+      - text: Edit the title in Shelf’s database
+        explanation: The next push or nightly pull would overwrite it, and the recipe site’s users would still see the typo. Two writers means nobody knows which title is right.
+      - text: Add a “display title” column in Shelf that overrides the cached one
+        explanation: Tempting, but it makes Shelf a second owner of titles. The app’s users still see the typo, and the override silently hides every later change the app makes.
+      - text: Ask the recipe site’s team to fix it; their next push brings the fix to Shelf
+        correct: true
+        explanation: Right. Change data at its owner. The copy follows within seconds of the push.
+      - text: Wait for the nightly pull to correct it
+        explanation: The pull copies what the app has, and the app still has the typo. Nothing will change until the owner fixes it.
+  - prompt: A bug in the photo gallery means it stopped pushing title changes 3 days ago. When does Shelf catch up?
+    options:
+      - text: Never, until the gallery fixes its bug
+        explanation: This is what the nightly pull is for. It doesn’t depend on the app remembering to push.
+      - text: At the next nightly pull, which lists every photo with its current title
+        correct: true
+        explanation: Right. Push keeps copies fresh; the pull repairs what pushes missed. Unpushed changes show within 24 hours.
+      - text: Within 5 s, because that is Shelf’s freshness target
+        explanation: The 5-second target applies to changes that are pushed. Without a push, Shelf can’t know about the change until it asks.
+  - prompt: Why does Shelf keep copies of titles and links at all, instead of asking the app on each lookup?
+    options:
+      - text: Because Shelf owns titles and links
+        explanation: It doesn’t. The apps own them; Shelf only keeps copies.
+      - text: So lookups stay fast, and stay up when an app is slow or down
+        correct: true
+        explanation: Right. A lookup that had to ask the apps could never be faster or more available than the slowest of them.
+      - text: So curators can edit titles in one place
+        explanation: Curators don’t edit titles at all. The copies are read-only in Shelf.
+  - prompt: Which of these columns in Shelf’s `items` table is Shelf’s own truth, not a copy?
+    options:
+      - text: "`url`"
+        explanation: The app decides where its item lives. Shelf keeps a copy.
+      - text: "`source_updated_at`"
+        explanation: It records the app’s own time for its last change. Shelf copies it so it can order changes.
+      - text: "`scope`"
+        explanation: The app decides which scope each item goes in, inside its home scope. Shelf keeps a copy and checks it.
+      - text: "`missing_since`"
+        correct: true
+        explanation: Right. It records when Shelf decided the item was missing, from a pushed delete or a complete listing. No app sends it.

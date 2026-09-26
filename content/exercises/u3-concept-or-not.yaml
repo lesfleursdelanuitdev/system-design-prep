@@ -1,0 +1,51 @@
+id: u3-concept-or-not
+type: sort
+title: Concept, attribute or neither?
+intro: Here are 12 nouns from Shelf’s requirements and the conversations around them. A *concept* is something Shelf must recognise again later. An *attribute* is a fact about a concept.
+buckets:
+  - id: concept
+    label: A concept
+    hint: Has its own identity and lasts over time.
+  - id: attribute
+    label: A fact about a concept
+    hint: Belongs to something else.
+  - id: neither
+    label: Not in Shelf’s model
+    hint: An action, a moment, an example, or someone Shelf never deals with.
+items:
+  - text: Tag
+    bucket: concept
+    reason: Created once, sometimes renamed, used on many items for years. Shelf must recognise it every time.
+  - text: A page of lookup results
+    bucket: neither
+    reason: It exists only for the length of one request. The contract will describe pages, but the domain model doesn’t need them.
+  - text: An item’s title
+    bucket: attribute
+    reason: A fact about an item (and a cached copy of the app’s title, at that).
+  - text: Recipe
+    bucket: neither
+    reason: A recipe is one example of an item. Modelling it would make Shelf care about one app’s world, and every new app would change the model.
+  - text: Tagging (one tag on one item)
+    bucket: concept
+    reason: The link has facts of its own, such as when it was made and by whom. That makes it a thing to model, not only a verb.
+  - text: A source’s list URL
+    bucket: attribute
+    reason: A fact about a source, telling Shelf where to fetch its full list each night.
+  - text: A lookup
+    bucket: neither
+    reason: Something an app does. It becomes an operation in a contract, not a concept in the model.
+  - text: API key
+    bucket: concept
+    reason: It is created, given privileges and a scope, and revoked one day. Something with a life like that is a concept.
+  - text: The recipe site’s users
+    bucket: neither
+    reason: They see tags only through the recipe site and never talk to Shelf, so Shelf has no reason to model them.
+  - text: A tag’s name
+    bucket: attribute
+    reason: A fact about a tag. It can change (tags get renamed) while the tag stays the same tag.
+  - text: Scope
+    bucket: concept
+    reason: A node in the scope tree. Tags are defined in one, items live in one, and keys are limited to one.
+  - text: Source
+    bucket: concept
+    reason: A registered app (or anything else that supplies items), with its own id, home scope and list URL.
