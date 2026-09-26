@@ -1,0 +1,70 @@
+id: u6-a-spot-the-missing-error
+type: quiz
+title: Spot the missing error
+intro: Each question shows the error list from a draft of one of Shelf’s contracts. Each draft forgot something a caller needs. Find it.
+questions:
+  - prompt: |
+      A draft of the errors for **tag an item** (`PUT /v1/items/{sourceId}/{itemId}/tags/{tagId}`):
+
+      | Status | Code | When |
+      |---|---|---|
+      | 401 | `unauthenticated` | No key, or an unknown or revoked key |
+      | 403 | `forbidden` | The key may not tag here |
+      | 404 | `item_not_found` | Shelf has never seen this item |
+      | 404 | `tag_not_found` | No tag has this id |
+      | 422 | `tag_out_of_scope` | The tag’s scope doesn’t contain the item’s scope |
+      | 429 | `rate_limited` | Too many requests from this key |
+
+      What did it forget?
+    options:
+      - text: What happens when the item already has the tag
+        explanation: That isn’t a failure. Tagging is safe to repeat, so the call succeeds with `created` set to false. Listing it as an error would make every harmless retry look like a problem.
+      - text: What happens when Shelf knows the item, but it is missing or trashed
+        correct: true
+        explanation: Right. The item exists, so it isn’t `item_not_found`, but only present items can be tagged. The contract needs `409 item_missing`, and it should tell the caller that retrying won’t help until the app pushes or lists the item again.
+      - text: What happens when a tag with the same name already exists
+        explanation: That’s `tag_name_taken`, and it belongs to creating or renaming a tag. Tagging an item doesn’t create or name anything.
+      - text: The exact message text for each error
+        explanation: Messages are for people and may be reworded at any time. Callers branch on the code, so the contract deliberately leaves the wording open.
+  - prompt: |
+      A draft of the errors for **send changes** (`POST /v1/sources/{sourceId}/changes`, up to 500 changes a request):
+
+      | Status | Code | When |
+      |---|---|---|
+      | 400 | `invalid_request` | A change breaks a rule |
+      | 401 | `unauthenticated` | No key, or an unknown or revoked key |
+      | 403 | `forbidden` | The key can’t push for this source |
+      | 404 | `source_not_found` | No source has this id |
+      | 413 | `too_many_changes` | More than 500 changes |
+      | 422 | `scope_not_allowed` | A change puts an item outside the source’s home scope |
+      | 429 | `rate_limited` | More than 60 requests a minute |
+      | 503 | `unavailable` | Shelf can’t take changes right now |
+
+      The recipe site sends 200 changes and gets back `400 invalid_request`. What did the contract forget to tell it?
+    options:
+      - text: Which change was wrong, and whether any of the others were applied
+        correct: true
+        explanation: Right. Without `details.index`, the app has to guess which of 200 changes to fix. Without “nothing is applied”, it can’t tell whether 199 changes are already in Shelf. Shelf’s real contract says both.
+      - text: A separate error code for each field that can be wrong
+        explanation: Tempting, but the app does the same thing whichever field is wrong. It fixes the change and sends again. One code, with details naming the change, is enough. New codes are for when the caller should act differently.
+      - text: A `500` error for when Shelf’s database fails
+        explanation: "`503 unavailable` already covers Shelf being unable to take changes, and tells the app to retry with backoff. A second code with the same next step adds nothing."
+      - text: What happens when the same batch is sent twice
+        explanation: That matters, but it isn’t an error. Sending a batch again succeeds and leaves the same end state. It belongs in the contract’s behavioural guarantees.
+  - prompt: |
+      A draft of the errors in the **list items** contract, which Shelf writes and every app implements (`GET {listUrl}?cursor=…&limit=…`):
+
+      | Status | Code | When | What Shelf does |
+      |---|---|---|---|
+      | 400 | `invalid_cursor` | The cursor is unknown or more than an hour old | Starts the listing again from the beginning |
+      | 401 | `unauthenticated` | The pull secret is missing or wrong | Stops and alerts the admin |
+
+      What did it forget?
+    options:
+      - text: What an app should answer when it can’t list its items right now, and what Shelf does then
+        correct: true
+        explanation: Right. Without it, one app answers `500` and another sends an empty last page, which looks like “every item was deleted”. The real contract says to answer `503 unavailable`; Shelf retries the page three times, then gives up for tonight and marks **nothing** missing.
+      - text: An error for an app that has no items at all
+        explanation: An empty list isn’t a failure. The app answers `200` with no items and `nextCursor` set to `null`. (If that would mark more than 20% of the source’s items missing, Shelf holds the run and asks the admin.)
+      - text: "`404 item_not_found` for items the app has deleted"
+        explanation: Deleted items don’t appear in the listing. That’s how Shelf learns they’re gone. After a complete listing, anything that didn’t appear is marked missing.

@@ -1,0 +1,48 @@
+id: u6-a-rename-a-tag
+type: sort
+title: Four parts of renaming a tag
+intro: A curator renames the tag `quick` (in `/food`) to `weeknight`, with `PATCH /v1/tags/{tagId}`. Sort each line of its contract into the part it belongs to.
+buckets:
+  - id: input
+    label: Input
+    hint: What the caller sends.
+  - id: output
+    label: Output
+    hint: What comes back when it works.
+  - id: precondition
+    label: Precondition
+    hint: What must already be true.
+  - id: postcondition
+    label: Postcondition
+    hint: What is guaranteed afterwards.
+items:
+  - text: The new name, `weeknight`, in the request body
+    bucket: input
+    reason: The caller sends it. The contract limits it to 50 characters.
+  - text: No other tag in `/food` is already called `weeknight`, ignoring case
+    bucket: precondition
+    reason: A fact about Shelf’s data that must hold when the request arrives. If it doesn’t, the rename fails with `409 tag_name_taken`.
+  - text: Lookups by the old name, `quick`, keep working for 30 days
+    bucket: postcondition
+    reason: A promise about what is true after a successful rename. Apps that stored the old name have a month to catch up.
+  - text: The tag as it is now, with its id, its new name and its scope
+    bucket: output
+    reason: What the response carries, so the caller can show the result without asking again.
+  - text: The key has `tags:manage` in `/food`, or in a scope above it
+    bucket: precondition
+    reason: The caller sends a key, but whether that key may rename this tag is a fact about the world. If not, the answer is `403 forbidden`.
+  - text: The tag’s id, in the path
+    bucket: input
+    reason: The caller sends it to say which tag. It’s opaque, and it doesn’t change when the name does.
+  - text: Every item that had the tag still has it, and the tag’s id is unchanged
+    bucket: postcondition
+    reason: The most important promise of a rename. Nothing is lost or moved, because taggings point at the id, not the name.
+  - text: The tag exists
+    bucket: precondition
+    reason: Something that must already be true. If no tag has that id, the answer is `404 tag_not_found`.
+  - text: Nobody can create a new tag called `quick` in `/food` for 30 days
+    bucket: postcondition
+    reason: It follows from the alias. While `quick` still points at the renamed tag, a new tag with that name would make lookups ambiguous.
+  - text: The old name, and the date it stops working as an alias
+    bucket: output
+    reason: Returned with the tag so the caller can tell people how long the old name will keep working.

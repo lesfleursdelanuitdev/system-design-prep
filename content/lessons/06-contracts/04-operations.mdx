@@ -1,0 +1,109 @@
+---
+unit: 6
+order: 4
+title: "Step 3: operations"
+summary: For every operation, write down its inputs, its outputs, what must be true before it runs and what is guaranteed afterwards. Shown with tagging an item and sending changes.
+minutes: 8
+terms: [operation, precondition, postcondition, http-method, endpoint]
+---
+
+## In one sentence
+
+For each operation a contract offers, write down four things: what the caller sends, what comes back, what must already be true for it to work, and what is guaranteed to be true once it has.
+
+## Example: tag an item
+
+The quiz app puts the tag `exam-prep` (id `tag_7kq2m9`) on quiz `q-311`:
+
+```http
+PUT /v1/items/quizzes/q-311/tags/tag_7kq2m9
+Authorization: Bearer <the quiz app's key>
+
+200 OK
+{
+  "tagId": "tag_7kq2m9",
+  "sourceId": "quizzes",
+  "itemId": "q-311",
+  "created": true,
+  "taggedAt": "2026-03-14T09:30:00Z"
+}
+```
+
+Here is the whole operation, in four parts:
+
+| Part | Tag an item |
+|---|---|
+| **Inputs** | The source id, the item id (URL-encoded) and the tag id, all in the path. The caller’s key. No body. |
+| **Outputs** | The three ids; `created`, which is false if the item already had the tag; and `taggedAt`, when the tag was first put on. |
+| **Preconditions** | The key has `tags:apply`, and both the item and the tag are inside its scope. Shelf knows the item, and it is present. The tag exists. The tag’s scope contains the item’s scope. |
+| **Postconditions** | The item has the tag, exactly once. The tagging shows in lookups as soon as the response is sent. If the item already had the tag, nothing changed, and `taggedAt` is still the original time. |
+
+Look at the difference between inputs and preconditions. Inputs are what the caller sends. Preconditions are facts about the world that must already hold. The quiz app can send a perfectly formed request for a quiz its team deleted yesterday. It still won’t work, because “the item is present” is false, and no change to the request can fix that.
+
+The method is a choice too. Tagging uses `PUT` because the path names one exact tagging, and putting it there twice leaves one. `PUT` says “make this so”, which is what the postcondition promises.
+
+### Send changes
+
+A bigger operation, with the same four parts. The recipe site updates one recipe and deletes another:
+
+```http
+POST /v1/sources/recipes/changes
+Authorization: Bearer <the recipe site's key>
+Idempotency-Key: 7d2c9e14
+
+{ "changes": [
+  { "op": "upsert", "id": "r-1042", "title": "Lentil soup",
+    "url": "https://recipes.example/r/1042", "updatedAt": "2026-03-14T09:30:00Z" },
+  { "op": "delete", "id": "r-977", "updatedAt": "2026-03-14T09:31:00Z" }
+] }
+
+200 OK
+{ "accepted": 2,
+  "results": [
+    { "id": "r-1042", "status": "present", "ignored": false },
+    { "id": "r-977", "status": "missing", "ignored": false }
+  ] }
+```
+
+| Part | Send changes |
+|---|---|
+| **Inputs** | The source id in the path. Up to 500 changes, each with `op` (`upsert` or `delete`), `id` and `updatedAt`. An upsert also needs a `title`, and may have a `url` and a `scope`. An optional `Idempotency-Key` header. |
+| **Outputs** | `accepted`, the number of changes in the batch. `results`: one per change, in the same order, giving the item’s status afterwards and whether the change was `ignored`. |
+| **Preconditions** | The key has `items:push` and belongs to this source. The request holds at most 500 changes and 1 MB. Every change follows the field rules, and every scope is the source’s home scope or below it. |
+| **Postconditions** | Every change has been applied, in order, in one go. An upserted item is present, with its new title. A deleted item is missing, and keeps its tags for 30 days. A change older than the one Shelf already has changed nothing (`ignored: true`). Lookups show the changes within 5 s for 95% of batches. |
+
+The postconditions are where the design decisions show. “A deleted item is missing, and keeps its tags” is one line in the contract. It’s also the line the recipe site relies on the day it unpublishes 200 recipes by mistake.
+
+## The general idea
+
+An <Term id="operation">operation</Term> is one thing a caller can ask for: tag an item, send changes, list items. In an HTTP API, each operation is usually one <Term id="endpoint">endpoint</Term>: an <Term id="http-method">HTTP method</Term> plus a path. Name operations by what they mean to the caller (“tag an item”), not by how they travel (“a `PUT` on the tags path”). In code, they often get short names like `tagItem` and `sendChanges`.
+
+For each operation, write four things:
+
+| Part | The question it answers | Who uses it |
+|---|---|---|
+| **Inputs** | What does the caller send, and where: path, query, header or body? | the caller, building the request |
+| **Outputs** | What comes back when it works? | the caller, reading the response |
+| **Preconditions** | What must already be true for it to work? | the caller, before calling |
+| **Postconditions** | What is guaranteed to be true afterwards? | the caller, after a success |
+
+A <Term id="precondition">precondition</Term> is the caller’s side of the deal: make sure this holds, and the operation will work. A <Term id="postcondition">postcondition</Term> is the provider’s side: if it says OK, this is now true. Together they say exactly what a success means, which is the thing callers most often get wrong.
+
+Two habits make them useful:
+
+- **Every precondition becomes an error.** “The item is present” turns into `409 item_missing` when it isn’t. Listing preconditions is half the work of the next step, [errors](/learn/contracts/errors-are-part-of-the-contract/).
+- **Postconditions describe the result, not the steps.** “The item has the tag, exactly once” is a promise. “Shelf inserts a row into `taggings`” is an inside detail the caller can’t see and shouldn’t rely on.
+
+<GoDeeper title="Design by contract">
+The words precondition and postcondition come from *design by contract*, an idea that grew up with the Eiffel programming language in the 1980s. It adds a third kind of promise: an *invariant*, something true before and after every operation. Shelf has a few, such as “no two tags in one scope share a name, ignoring case” and “an item always lives in its source’s home scope or below it”. List invariants once for the whole contract, rather than repeating them in every operation.
+</GoDeeper>
+
+## Common mistakes
+
+- **Mixing inputs and preconditions.** “The item id” is an input. “The item exists and is present” is a precondition. Keep them apart, or the caller can’t tell a malformed request from one that arrived at the wrong moment.
+- **Vague postconditions.** “Updates the item” says nothing. Which fields? Visible when? What if the change is older than what Shelf already has?
+- **Forgetting the repeat.** What happens when the operation runs on something already done? For tagging, the postcondition covers it: still one tag, and `created: false`. You’ll meet this again in [behavioural guarantees](/learn/contracts/behavioural-guarantees/).
+
+## Try it
+
+<Sort id="u6-a-rename-a-tag" />

@@ -1,0 +1,84 @@
+---
+unit: 6
+order: 3
+title: "Step 2: nouns and identity"
+summary: List the things a contract talks about, say how each one is identified, give every value a limit, and mark which values the caller must pass back without looking inside.
+minutes: 8
+terms: [resource, key, stable-key, natural-key, surrogate-key, opaque-value]
+---
+
+## In one sentence
+
+Next, list the things the contract talks about, say exactly how each one is identified and how big each value may be, and mark the values the other side must pass back without looking inside.
+
+## Example: an item, pinned down
+
+Every contract between Shelf and the apps talks about items. Here is how the send-changes and list contracts describe one:
+
+| Field | Written as | Limits and rules | Made by |
+|---|---|---|---|
+| `id` | text | at most 200 characters; the app’s own id; never reused for a different item; compared exactly | the app |
+| `title` | text | at most 300 characters | the app |
+| `url` | text | at most 2,000 characters; optional | the app |
+| `scope` | a scope path, such as `/learning/maths` | at most 200 characters; the source’s home scope or below; if left out, the home scope | the app |
+| `updatedAt` | a date and time with a time zone, such as `2026-03-14T09:30:00Z` | when the item last changed in the app | the app |
+
+Is the item’s `id` enough to identify it? No. The recipe site and the quiz app could both have an item called `42`. So an item is identified by two values together: the source id **and** the item id. The recipe site’s `42` and the quiz app’s `42` are different items. That’s why every path that names an item carries both: `/v1/items/{sourceId}/{itemId}/tags/{tagId}`.
+
+### Why each rule is there
+
+Every line in that table prevents a real bug.
+
+- **“At most 200 characters.”** Without a limit, one day an app sends a 5,000-character id built from a web address, and the two teams find out in production which of them was wrong. With the limit, the app knows before it writes any code.
+- **“Never reused.”** Suppose the quiz app deletes quiz `q-17`, then gives the id `q-17` to a brand-new quiz a week later. Shelf sees a missing item come back within 30 days, with its tags intact. Now `exam-prep` and `algebra` sit on a quiz about French verbs.
+- **“Compared exactly.”** `Q-17` and `q-17` are two different items. Tag names work the other way: `Vegan` and `vegan` count as the same name. Either rule is fine. Not saying which is the bug.
+- **“At most 300 characters” for titles.** A push is all-or-nothing, so one 301-character title makes Shelf turn down the whole batch. Because the limit is written down, the recipe site knows to shorten long titles before it sends them.
+- **“With a time zone.”** Shelf ignores a change older than the one it already has. If `09:30` could mean London or Sydney, a fresh change can look hours older than it is, and be thrown away.
+
+One more: item ids are the app’s own, so they may contain characters like `/`. The contract says to URL-encode them in a path, so the quiz id `maths/fractions-3` travels as `maths%2Ffractions-3`.
+
+### Values you carry but never open
+
+Some values in a contract are meant to be handed back, not read. Shelf’s contracts have two:
+
+- **Tag ids**, such as `tag_7kq2m9`. Shelf makes them. The contract says: text, at most 40 characters, opaque.
+- **Cursors** in the list contract. The app makes them. The contract says: text, at most 500 characters, valid for at least an hour, opaque.
+
+“Opaque” means: store it, compare it, send it back exactly as you got it. Don’t take it apart, don’t build one yourself, and don’t read meaning into it.
+
+<Callout type="story" title="The ten-character column">
+The photo gallery’s team noticed that every tag id was `tag_` plus six characters, so they stored tag ids in a column that held ten. It worked for a year. Then Shelf started making longer ids, well inside the 40 characters the contract allowed, and the gallery’s saves began to fail. Shelf had kept its promise. The gallery had relied on something nobody promised.
+</Callout>
+
+Opaque values give freedom to the side that makes them. Because Shelf never looks inside a cursor, the recipe site can switch from page numbers to “the last id I sent” without telling anyone.
+
+## The general idea
+
+The nouns of a contract are its <Term id="resource">resources</Term>: the kinds of thing it lets you work with. In Shelf’s contracts those are sources, items, tags, scopes and taggings. For each one, step 2 answers three questions.
+
+**1. What identifies it?** Its <Term id="key">key</Term>. In a contract, a key must be a <Term id="stable-key">stable key</Term>: it never changes for the life of the thing, and it’s never reused. Say whether the key is one value or several together (an item needs its source id *and* its item id), and whether it’s compared exactly or ignoring case.
+
+**2. Who makes the key?** An item id is a <Term id="natural-key">natural key</Term>: it already exists in the app, and Shelf adopts it. A tag id is a <Term id="surrogate-key">surrogate key</Term>: Shelf makes it up when a curator creates the tag. It means nothing, so it never needs to change, even when the tag is renamed. That’s why a tag’s name isn’t its key.
+
+**3. What are the limits?** Every text field gets a maximum length and, where it matters, a format. Every list gets a maximum size. Every number gets a range. Write them as plain facts both sides can check.
+
+<Compare>
+<Side title="A field name" tone="bad">
+`id`: string
+</Side>
+<Side title="A noun, pinned down" tone="good">
+`id`: the app’s own id for the item. Text, at most 200 characters, compared exactly, never reused. Together with the source id, it identifies the item.
+</Side>
+</Compare>
+
+Finally, mark every <Term id="opaque-value">opaque value</Term>. Saying “opaque” out loud stops consumers from building on the inside of a value, and leaves the side that makes it free to change how it works.
+
+## Common mistakes
+
+- **“string”, with no limits.** Every limit you leave out is one the other side will find by accident, in production.
+- **Using a name as a key.** Names change. If apps stored tag names instead of tag ids, every rename would break them. (Where Shelf does let you look a tag up by name, the old name keeps working as an alias for 30 days after a rename, for exactly this reason.)
+- **Giving out an internal key.** If Shelf returned its database row numbers and apps stored them, Shelf could never rebuild or renumber that table. Only give out keys you can promise to keep.
+
+## Try it
+
+<WriteIt id="u6-a-pin-down-the-tag" />

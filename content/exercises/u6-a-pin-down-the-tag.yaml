@@ -1,0 +1,41 @@
+id: u6-a-pin-down-the-tag
+type: write
+title: Pin down the tag
+prompt: |
+  Curators create tags with `POST /v1/tags`, and every lookup names a tag. Write the nouns-and-identity part of the contract for a **tag**.
+
+  For each field, say what it is, who makes it and its limits. Then say which field is the key, and which values callers must treat as opaque.
+starter: |
+  Tag
+  - id:
+  - name:
+  - scope:
+  - description:
+
+  The key is:
+  Opaque values:
+rows: 14
+hints:
+  - Who makes the id, the curator or Shelf? What should an app do with it?
+  - Can two tags in `/food` be called `Vegan` and `vegan`? Can `/learning` and `/photos` each have a tag called `beginner`?
+  - What happens to a tag’s name when a curator renames it? What would that do to a key?
+  - Every text field needs a maximum length. If nothing tells you one, choose a sensible number and write it down.
+checklist:
+  - Says Shelf makes the id, and callers treat it as opaque (store it, send it back, never build or parse it)
+  - Gives a maximum length for every text field
+  - Says tag names are unique within a scope, ignoring case
+  - Says what a scope value looks like (a path such as `/food`) and what it means for where the tag can go
+  - Explains why the name can’t be the key
+modelAnswer: |
+  **Tag**
+
+  - **id**: made by Shelf when the tag is created, such as `tag_7kq2m9`. Text, at most 40 characters. Never changes, never reused. **Opaque:** store it and send it back; don’t build one or read meaning into its shape.
+  - **name**: chosen by the curator. Text, 1–50 characters. Unique within its scope, ignoring case, so `Vegan` and `vegan` can’t both exist in `/food`. Can be renamed; the old name then works as an alias for 30 days, and nobody can take it in that scope meanwhile.
+  - **scope**: the path of the scope the tag is defined in, such as `/food`. At most 200 characters. The tag can go on items in this scope or below it.
+  - **description**: optional, written by the curator. Text, at most 500 characters.
+
+  **The key is** the `id`, on its own. The name can’t be the key: it changes when a curator renames the tag, and it isn’t unique across Shelf (`/learning` and `/photos` could each have a tag called `beginner`).
+
+  **Opaque values:** the `id`. Everything else is meant to be read.
+
+  *Your limits may differ (the 500 for descriptions is a choice, not a fact). What matters is that every field has one, written down before anyone builds against it.*

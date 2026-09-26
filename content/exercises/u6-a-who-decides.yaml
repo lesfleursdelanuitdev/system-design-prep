@@ -1,0 +1,41 @@
+id: u6-a-who-decides
+type: quiz
+title: Who decides?
+intro: Four questions that come up between Shelf and the apps. Use the sides and the owners to settle each one.
+questions:
+  - prompt: A curator spots a typo in a recipe’s title while tagging it in Shelf. What should the contract let them do?
+    options:
+      - text: Fix the title in Shelf, since that’s where they are
+        explanation: Shelf’s title is a cached copy. The next push or nightly pull brings back the recipe site’s version and the fix vanishes.
+      - text: Tell the recipe site’s team, so the fix arrives with the site’s next push
+        correct: true
+        explanation: Right. The recipe site owns the title. Fix it at the source of truth and the copy in Shelf follows.
+      - text: Fix it in Shelf and have Shelf send the fix back to the recipe site
+        explanation: Then two places could change titles, and they would fight. No Shelf contract lets Shelf change an app’s items, and that’s deliberate.
+  - prompt: The photo gallery’s list endpoint returns a page of 800 photos. Whose problem is that?
+    options:
+      - text: Shelf’s, because it should cope with any page size
+        explanation: Shelf wrote the contract and chose the limit so every app would be read the same way. Coping with anything is how you end up with no contract at all.
+      - text: The gallery’s, because it broke a contract it agreed to build to
+        correct: true
+        explanation: Right. The contract says at most 500 items a page, and the gallery implements it. A written owner turns an argument into a bug report.
+      - text: Nobody’s, because page size is a detail
+        explanation: It’s a detail that Shelf sized its timeouts and memory around, and it’s written in the contract. Breaking a written limit is never nobody’s problem.
+  - prompt: The quiz app’s team would like its list endpoint to answer with `data` and `next` instead of `items` and `nextCursor`, to match their other APIs. Who decides?
+    options:
+      - text: The quiz app’s team, because the endpoint runs on their servers
+        explanation: They provide it, but Shelf writes the contract. Serving an endpoint and deciding its shape are different kinds of ownership.
+      - text: Shelf, because it writes the one contract every app builds to
+        correct: true
+        explanation: Right. Allowing one app its own shape means Shelf needs a second piece of pull code, and a third, and so on. Changing it for everyone means every team changes.
+      - text: Both teams, by agreeing a shape between them
+        explanation: That produces a one-off shape for the quiz app. The whole point of this contract is that it’s the same for every app.
+  - prompt: Under the list contract, which of these is the app’s decision rather than Shelf’s?
+    options:
+      - text: What a cursor looks like inside and what it encodes
+        correct: true
+        explanation: Right. The cursor is opaque to Shelf. The app may use page numbers, a last-seen id or anything else, as long as it fits in 500 characters and stays valid for at least an hour.
+      - text: The most items a page may hold
+        explanation: Shelf sets that (at most 500) in the contract. The app may return fewer, never more.
+      - text: What happens to items that didn’t appear in a complete listing
+        explanation: "That’s Shelf’s rule, and its most important one. Shelf marks them missing, and only after a listing that reached `nextCursor: null`."
